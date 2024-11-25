@@ -153,14 +153,20 @@ int main(int argc, char *argv[]) {
                         long long personId = stoll(personId_str);
                         args.emplace_back(personId);
                         args.emplace_back(firstName);
-                        ic1(args, result);
-                    } else if (proc == "ic2" || proc == "is1") {
+                        // ic1(args, result);
+                    } else if (proc == "ic2") {
+                        size_t pos = line.find(" ");
+                        string personId_str = line.substr(0, pos);
+                        string datetime_str = line.substr(pos + 1);
+                        long long personId = stoll(personId_str);
+                        long long datetime = stoll(datetime_str);
+                        args.emplace_back(personId);
+                        args.emplace_back(datetime);
+                        ic2(args, result);
+                    } else if (proc == "is1") {
                         long long personId = stoll(line);
                         args.emplace_back(personId);
-                        if (proc == "ic2")
-                            ic2(args, result);
-                        else
-                            is1(args, result);
+                        is1(args, result);
                     }
                     printResults(result);
                     getline(fin, line);
@@ -198,7 +204,31 @@ int main(int argc, char *argv[]) {
                 args.emplace_back(personId);
                 args.emplace_back(firstName);
                 ic1(args, result);
-            } else if (proc == "ic2" || proc == "is1") {
+            } else if (proc == "ic2") {
+                size_t next_pos = line.find(" ", pos + 1);
+                if (next_pos == string::npos) {
+                    cout << "Invalid input" << endl;
+                    continue;
+                }
+                string personId_str = line.substr(pos + 1, next_pos - pos - 1);
+                string datetime_str = line.substr(next_pos + 1);
+                long long personId = -1, datetime = -1;
+                try {
+                    personId = stoll(personId_str);
+                } catch (invalid_argument &e) {
+                    cout << "Invalid input" << endl;
+                    continue;
+                }
+                try {
+                    datetime = stoll(datetime_str);
+                } catch (invalid_argument &e) {
+                    cout << "Invalid input" << endl;
+                    continue;
+                }
+                args.emplace_back(personId);
+                args.emplace_back(datetime);
+                ic2(args, result);
+            } else if (proc == "is1") {
                 string personId_str = line.substr(pos + 1);
                 long long personId = -1;
                 try {
@@ -208,10 +238,7 @@ int main(int argc, char *argv[]) {
                     continue;
                 }
                 args.emplace_back(personId);
-                if (proc == "ic2")
-                    ic2(args, result);
-                else
-                    is1(args, result);
+                is1(args, result);
             }
             printResults(result);
         }
