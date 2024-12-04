@@ -12,6 +12,21 @@
 #include <limits.h>
 using namespace std;
 
+// windows下运行代码使用
+struct tm* localtime_r(const time_t* timep, struct tm* result)
+{
+    // 调用 localtime() 函数获取本地时间
+    struct tm* tmp = localtime(timep);
+
+    // 将 localtime() 函数返回的结果复制到 result 中
+    if (tmp != nullptr)
+    {
+        memcpy(result, tmp, sizeof(struct tm));
+    }
+
+    return tmp;
+}
+
 /**
  * @brief Constructs a Value object which is of type NO_VALUE.
  * This default constructor will not allocate any memory, and the type of the Value object is NO_VALUE.

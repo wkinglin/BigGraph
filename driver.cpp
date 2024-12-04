@@ -125,6 +125,52 @@ int main(int argc, char *argv[]) {
 
     // [FILL HERE] Load the dataset according to the scale factor
 
+    // 基本路径
+    string separator;
+    bool isWindows = false;
+    #ifdef _WIN32
+        isWindows = true;
+    #else
+        isWindows = false;
+    #endif
+
+    if(isWindows) separator = "\\";
+    else separator = "/";
+
+    string smallGraph = "social_network-csv_composite-longdateformatter-sf0.1" + separator + "social_network-csv_composite-longdateformatter-sf0.1";
+    string bigGraph = "social_network-csv_composite-longdateformatter-sf3" + separator + "social_network-csv_composite-longdateformatter-sf3";
+    if(isWindows){
+        smallGraph = "..\\" + smallGraph;
+        bigGraph = "..\\" + bigGraph;
+    }
+
+    string headersPath, dynamicPath, staticPath;
+    string line1;
+    if(sf=="0.1"){
+        headersPath = smallGraph + separator + "headers";
+        dynamicPath = smallGraph + separator + "dynamic";
+        staticPath = smallGraph + separator + "static";
+    }
+    else{
+        headersPath = bigGraph + separator + "headers";
+        dynamicPath = bigGraph + separator + "dynamic";
+        staticPath = bigGraph + separator + "static";
+    }
+
+    // 提取Person节点
+    string personHeaderPath = headersPath + separator + "dynamic" + separator + "Person.csv";
+    ifstream fin(personHeaderPath);
+    if (!fin.is_open()) {
+        cout << "Failed to open " << personHeaderPath << endl;
+        return 1;
+    }
+    while (getline(fin, line1)) {
+        std::vector<string> props = split(line1, '|');
+        for(auto& item:props) cout << item <<" ";
+    }
+
+    return 1;
+
     // Repeatedly read test cases from stdin
     string line;
     while (getline(cin, line)) {
