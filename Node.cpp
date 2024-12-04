@@ -30,3 +30,11 @@ void Node::GetLinkedNodesWithEdgeProps(const std::string& pre_str, std::shared_p
                                        unsigned& prop_len, unsigned& list_len, char edge_dir) {
 
 }
+
+void Node::setLabel(const std::string &label_string) {
+    this->label_string = label_string;
+}
+
+void Node::setValues(const std::string &prop_string, const GPStore::Value *value) {
+    this->columns[prop_string] = value;
+}

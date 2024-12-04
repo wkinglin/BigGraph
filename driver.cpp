@@ -146,6 +146,7 @@ int main(int argc, char *argv[]) {
 
     string headersPath, dynamicPath, staticPath;
     string line1;
+    long long nodeId = 0;
     if(sf=="0.1"){
         headersPath = smallGraph + separator + "headers";
         dynamicPath = smallGraph + separator + "dynamic";
@@ -159,17 +160,42 @@ int main(int argc, char *argv[]) {
 
     // 提取Person节点
     string personHeaderPath = headersPath + separator + "dynamic" + separator + "Person.csv";
-    ifstream fin(personHeaderPath);
-    if (!fin.is_open()) {
+    string personFilePath = dynamicPath + separator + "person_0_0.csv";
+    ifstream finHeader(personHeaderPath);
+    ifstream finFile(personFilePath);
+
+    std::vector<string> props;
+    std::vector<GPStore::Value> contents;
+
+    if (!finHeader.is_open()) {
         cout << "Failed to open " << personHeaderPath << endl;
         return 1;
     }
-    while (getline(fin, line1)) {
-        std::vector<string> props = split(line1, '|');
+    if (!finFile.is_open()) {
+        cout << "Failed to open " << personHeaderPath << endl;
+        return 1;
+    }
+    while (getline(finHeader, line1)) {
+        props = split(line1, '|');
+        //  提取的header内容
         for(auto& item:props) cout << item <<" ";
     }
+    while (getline(finFile, line1)) {
+        vector<string> stringContents = split(line1, '|');
+        for(auto& item:stringContents) contents.emplace_back(item);
+        if(props.size()!=contents.size()){
+            cout << "Props and contents size not equal.";
+            return 1;
+        }
+        Node node(nodeId++);
+        for(int i = 0; i < props.size(); i++){
+            node.setLabel("Person");
+            node.setValues(props[i],&contents[i]);
+        }
 
-    return 1;
+    }
+
+
 
     // Repeatedly read test cases from stdin
     string line;
