@@ -8,7 +8,7 @@ class Node {
   unsigned node_id_; //每个node要维护一个新的id
   std::string label_string; //node的Type
   std::unordered_map<std::string,GPStore::Value> columns;  //node的属性
-  std::unordered_map<std::string,GPStore::Value> relation;  //node与其他node的关系
+  std::unordered_map<std::string,GPStore::Value> relations;  //node与其他node的关系
 
   Node()=default;
   Node(const std::string& label_string, const std::string& prop_string, const GPStore::Value* value);
@@ -23,5 +23,17 @@ class Node {
 
   void setLabel(const std::string& label_string);
   void setValues(const std::string& prop_string, const GPStore::Value* value);
+
+  void print();
 };
 
+
+// 不同节点的列表，格式为id2Node
+extern std::unordered_map<std::string, Node> PersonMap;
+extern std::unordered_map<std::string, Node> CityMap;
+extern std::unordered_map<std::string, Node> CompanyMap;
+extern std::unordered_map<std::string, Node> UniversityMap;
+extern std::unordered_map<std::string, Node> CountryMap;
+extern std::unordered_map<std::string, Node> MessageMap;
+extern std::unordered_map<std::string, Node> PostMap;
+extern std::unordered_map<std::string, Node> CommentMap;

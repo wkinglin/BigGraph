@@ -158,43 +158,76 @@ int main(int argc, char *argv[]) {
         staticPath = bigGraph + separator + "static";
     }
 
-    // 提取Person节点
-    string personHeaderPath = headersPath + separator + "dynamic" + separator + "Person.csv";
-    string personFilePath = dynamicPath + separator + "person_0_0.csv";
-    ifstream finHeader(personHeaderPath);
-    ifstream finFile(personFilePath);
+    std::unordered_map<string,std::vector<string>> nodeType2File={
+            {"Person",{"dynamic", "Person.csv", "person_0_0.csv"}},
+            {"Comment",{"dynamic", "Comment.csv", "comment_0_0.csv"}},
+            {"Post",{"dynamic", "Post.csv", "post_0_0.csv"}},
+            {"University",{"static", "Organisation.csv", "organisation_0_0.csv"}},
+            {"Company",{"static", "Organisation.csv", "organisation_0_0.csv"}},
+            {"City",{"static", "Place.csv", "place_0_0.csv"}},
+            {"Country",{"static", "Place.csv", "place_0_0.csv"}},
+    };
 
-    std::vector<string> props;
-    std::vector<GPStore::Value> contents;
+    std::unordered_map<string, std::unordered_map<std::string, Node>> type2Map={
+            {"Person", PersonMap},
+            {"Comment", CommentMap},
+            {"Post", PostMap},
+            {"University", UniversityMap},
+            {"Company", CompanyMap},
+            {"City", CityMap},
+            {"Country", CountryMap},
+    };
 
-    if (!finHeader.is_open()) {
-        cout << "Failed to open " << personHeaderPath << endl;
-        return 1;
-    }
-    if (!finFile.is_open()) {
-        cout << "Failed to open " << personHeaderPath << endl;
-        return 1;
-    }
-    while (getline(finHeader, line1)) {
-        props = split(line1, '|');
-        //  提取的header内容
-        for(auto& item:props) cout << item <<" ";
-    }
-    while (getline(finFile, line1)) {
-        vector<string> stringContents = split(line1, '|');
-        for(auto& item:stringContents) contents.emplace_back(item);
-        if(props.size()!=contents.size()){
-            cout << "Props and contents size not equal.";
+
+    for(auto& nodeInfo: nodeType2File) {
+        string nodeType = nodeInfo.first;
+        bool isDynamic = (nodeInfo.second[0]=="dynamic")? true: false;
+
+        string headerPath = headersPath + separator + nodeInfo.second[0] + separator + nodeInfo.second[1];
+        string filePath = (isDynamic ? dynamicPath : staticPath) + separator + nodeInfo.second[2];
+
+        ifstream finHeader(headerPath);
+        ifstream finFile(filePath);
+
+        std::vector<string> props;
+        std::vector<GPStore::Value> contents;
+
+        if (!finHeader.is_open()) {
+            cout << "Failed to open " << headerPath << endl;
             return 1;
         }
-        Node node(nodeId++);
-        for(int i = 0; i < props.size(); i++){
-            node.setLabel("Person");
-            node.setValues(props[i],&contents[i]);
+        if (!finFile.is_open()) {
+            cout << "Failed to open " << filePath << endl;
+            return 1;
+        }
+        while (getline(finHeader, line1)) {
+            props = split(line1, '|');
+            //  提取的header内容
+            for (auto &item: props) cout << item << " ";
+            cout << "\n";
+        }
+        while (getline(finFile, line1)) {
+            contents.clear();
+            vector<string> stringContents = split(line1, '|');
+            for (auto &item: stringContents) contents.emplace_back(item);
+            if (props.size() != contents.size()) {
+                cout << "Props and contents size not equal.";
+                return 1;
+            }
+            Node node(nodeId++);
+            for (int i = 0; i < props.size(); i++) {
+                node.setLabel(nodeType);
+                node.setValues(props[i], &contents[i]);
+            }
+//        node.print();
+            type2Map[nodeType][to_string(node.node_id_)] = node;
         }
 
+        cout << nodeType<< "Mapsize: " << type2Map[nodeType].size() << "\n";
     }
 
+
+    return 1;
 
 
     // Repeatedly read test cases from stdin
