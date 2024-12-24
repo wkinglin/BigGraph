@@ -5,6 +5,7 @@
 #include <stack>
 #include <regex>
 #include "PProcedure.h"
+#include <windows.h>
 using namespace std;
 
 void printResults(vector<vector<GPStore::Value>> &result) {
@@ -143,6 +144,7 @@ int main(int argc, char *argv[]) {
     if(isWindows){
         smallGraph = "..\\" + smallGraph;
         bigGraph = "..\\" + bigGraph;
+        SetConsoleOutputCP(CP_UTF8);
     }
 
     string headersPath, dynamicPath, staticPath;
@@ -174,204 +176,255 @@ int main(int argc, char *argv[]) {
             {"Person",{"dynamic", "Person_isLocatedIn_City.csv", "person_isLocatedIn_place_0_0.csv"}},
             {"Person",{"dynamic", "Person_studyAt_University.csv", "person_studyAt_organisation_0_0.csv"}},
             {"Person",{"dynamic", "Person_workAt_Company.csv", "person_workAt_organisation_0_0.csv"}},
-            {"Comment",{"dynamic", "Comment_hasCreator_Person.csv", "comment_hasCreator_person_0_0.csv"}},
-            {"Post",{"dynamic", "Post_hasCreator_Person.csv", "post_hasCreator_person_0_0.csv"}},
+//            {"Comment",{"dynamic", "Comment_hasCreator_Person.csv", "comment_hasCreator_person_0_0.csv"}},
+//            {"Post",{"dynamic", "Post_hasCreator_Person.csv", "post_hasCreator_person_0_0.csv"}},
             {"Organisation",{"static", "Organisation_isLocatedIn_Place.csv", "organisation_isLocatedIn_place_0_0.csv"}},
     };
 
-    std::unordered_map<string, std::unordered_map<string, Node>> type2Map={
-            {"Person", PersonMap},
-            {"Comment", CommentMap},
-            {"Post", PostMap},
-            {"University", UniversityMap},
-            {"Company", CompanyMap},
-            {"City", CityMap},
-            {"Country", CountryMap},
-            {"Message", MessageMap},
-            {"Organisation", OrganisationMap},
-            {"Place", PlaceMap},
+    std::unordered_map<string, std::unordered_map<string, Node>*> type2Map={
+            {"Person", &PersonMap},
+            {"Comment", &CommentMap},
+            {"Post", &PostMap},
+            {"University", &UniversityMap},
+            {"Company", &CompanyMap},
+            {"City", &CityMap},
+            {"Country", &CountryMap},
+            {"Message", &MessageMap},
+            {"Organisation", &OrganisationMap},
+            {"Place", &PlaceMap},
     };
 
-    std::unordered_map<string, std::unordered_map<string, string>> type2IDMap={
-            {"Person", PersonIDMap},
-            {"Comment", CommentIDMap},
-            {"Post", PostIDMap},
-            {"University", UniversityIDMap},
-            {"Company", CompanyIDMap},
-            {"City", CityIDMap},
-            {"Country", CountryIDMap},
-            {"Message", MessageIDMap},
-            {"Organisation", OrganisationIDMap},
-            {"Place", PlaceIDMap},
+    std::unordered_map<string, std::unordered_map<string, string>*> type2IDMap={
+            {"Person", &PersonIDMap},
+            {"Comment", &CommentIDMap},
+            {"Post", &PostIDMap},
+            {"University", &UniversityIDMap},
+            {"Company", &CompanyIDMap},
+            {"City", &CityIDMap},
+            {"Country", &CountryIDMap},
+            {"Message", &MessageIDMap},
+            {"Organisation", &OrganisationIDMap},
+            {"Place", &PlaceIDMap},
     };
 
     // 建立节点
-    for(auto& nodeInfo: nodeType2File) {
-        string nodeType = nodeInfo.first;
-        bool isDynamic = (nodeInfo.second[0] == "dynamic");
+    try {
+        for(auto& nodeInfo: nodeType2File) {
+            string nodeType = nodeInfo.first;
+            bool isDynamic = (nodeInfo.second[0] == "dynamic");
 
-        string headerPath = headersPath + separator + nodeInfo.second[0] + separator + nodeInfo.second[1];
-        string filePath = (isDynamic ? dynamicPath : staticPath) + separator + nodeInfo.second[2];
+            string headerPath = headersPath + separator + nodeInfo.second[0] + separator + nodeInfo.second[1];
+            string filePath = (isDynamic ? dynamicPath : staticPath) + separator + nodeInfo.second[2];
 
-        ifstream finHeader(headerPath);
-        ifstream finFile(filePath);
+            ifstream finHeader(headerPath);
+            ifstream finFile(filePath);
 
-        std::vector<string> props;
+            std::vector<string> props;
 
-        if (!finHeader.is_open()) {
-            cout << "Failed to open " << headerPath << endl;
-            return 1;
-        }
-        if (!finFile.is_open()) {
-            cout << "Failed to open " << filePath << endl;
-            return 1;
-        }
-        while (getline(finHeader, line1)) {
-            props = split(line1, '|');
-            //  提取的header内容
-            for (auto &item: props) cout << item << " ";
-            cout << "\n";
-        }
-        while (getline(finFile, line1)) {
-            GPStore::Value id(-1);
-            Node node(nodeId++);
-
-            vector<string> stringContents = split(line1, '|');
-            if (props.size() != stringContents.size()) {
-                cout << "Props and contents size not equal.";
+            if (!finHeader.is_open()) {
+                cout << "Failed to open " << headerPath << endl;
                 return 1;
             }
+            if (!finFile.is_open()) {
+                cout << "Failed to open " << filePath << endl;
+                return 1;
+            }
+            while (getline(finHeader, line1)) {
+                props = split(line1, '|');
+                //  提取的header内容
+                for (auto &item: props) cout << item << " ";
+                cout << "\n";
+            }
+            while (getline(finFile, line1)) {
+                GPStore::Value id(-1);
+                Node node(nodeId++);
+                node.setLabel(nodeType);
 
-            for (int i = 0; i < props.size(); i++) {
-                int pos = props[i].find(":");
-                string content = stringContents[i];
-                string propsType = props[i].substr(pos+1);
-
-                GPStore::Value value;
-                if(propsType.find("ID")!=std::string::npos){
-                    value = GPStore::Value(stoll(content));
-                    id = value;
-                }
-                else if(propsType == "LABEL") value = GPStore::Value(content);
-                else if(propsType == "STRING") value = GPStore::Value(content);
-                else if(propsType == "LONG") value = GPStore::Value(stoll(content));
-                else if(propsType == ("STRING[]")){
-                    // 这里只考虑了stringList
-                    vector<string> stringList = split(content,';');
-                    vector<GPStore::Value* > valueList;
-                    for(auto& item:stringList) valueList.push_back(new GPStore::Value(item));
-                    value = GPStore::Value(valueList);
-                }
-                else{
-                    cout << "Special Props Type: " << propsType << "!";
+                vector<string> stringContents = split(line1, '|');
+                if (props.size() != stringContents.size()) {
+                    cout << "Props and contents size not equal.";
                     return 1;
                 }
 
-                node.setLabel(nodeType);
-                node.setValues(props[i], &value);
-            }
-            // node.print();
-            if(!isDynamic){
-                string type = node.columns[":LABEL"].toString();
-                type = string(1, toupper(type[0])) + type.substr(1);
-                if (type != nodeType) continue;
+                for (int i = 0; i < props.size(); i++) {
+                    int pos = props[i].find(":");
+                    string content = stringContents[i];
+                    string propsType = props[i].substr(pos+1);
+
+                    GPStore::Value* value = nullptr;
+                    if(propsType.find("ID")!=std::string::npos){
+                        value = new GPStore::Value(stoll(content));
+                        id = *value;
+                    }
+                    else if(propsType == "LABEL") value = new GPStore::Value(content);
+                    else if(propsType == "STRING") value = new GPStore::Value(content);
+                    else if(propsType == "LONG") value = new GPStore::Value(stoll(content));
+                    else if(propsType == ("STRING[]")){
+                        vector<string> stringList = split(content,';');
+                        vector<GPStore::Value* > valueList;
+                        for(auto& item:stringList) {
+                            valueList.push_back(new GPStore::Value(item));
+                        }
+                        value = new GPStore::Value(valueList, true); // true表示深拷贝
+                    }
+                    else{
+                        cout << "Special Props Type: " << propsType << "!";
+                        return 1;
+                    }
+
+                    node.setValues(props[i], value); // 传入动态分配的指针
+                }
+
+                if(!isDynamic){
+                    string type = node.columns[":LABEL"].toString();
+                    type = string(1, toupper(type[0])) + type.substr(1);
+                    if (type != nodeType) continue;
+                }
+
+                // 添加节点到相应的Map中
+                auto& innerMap = *type2Map[nodeType];
+                auto& innerIDMap = *type2IDMap[nodeType];
+
+                string nodeIdStr = to_string(node.node_id_);
+                innerMap[nodeIdStr] = node;
+                innerIDMap[id.toString()] = nodeIdStr;
+
+                // 对父类进行处理
+                if(nodeType=="Post" || nodeType=="Comment") {
+                    MessageMap[to_string(node.node_id_)] = node;
+                    MessageIDMap[id.toString()] = to_string(node.node_id_);
+                }
+                else if(nodeType=="University" || nodeType=="Company") {
+                    OrganisationMap[to_string(node.node_id_)] = node;
+                    OrganisationIDMap[id.toString()] = to_string(node.node_id_);
+                }
+                else if(nodeType=="City" || nodeType=="Country"){
+                    PlaceMap[to_string(node.node_id_)] = node;
+                    PlaceIDMap[id.toString()] = to_string(node.node_id_);
+                }
             }
 
-            // 添加节点
-            type2Map[nodeType][to_string(node.node_id_)] = node;
-            type2IDMap[nodeType][id.toString()] = to_string(node.node_id_);
+            cout << nodeType<< "Mapsize: " << type2Map[nodeType]->size() << "\n";
+        }
+        cout << "--------------------------------\n";
 
-            // 对父类进行处理
-            if(nodeType=="Post" || nodeType=="Comment") {
-                MessageMap[to_string(node.node_id_)] = node;
-                MessageIDMap[id.toString()] = to_string(node.node_id_);
+        //建立节点之间的关系
+        for(auto& nodeInfo: nodeType2RelationFile) {
+            string nodeType = nodeInfo.first;
+            bool isDynamic = (nodeInfo.second[0] == "dynamic");
+
+            string headerPath = headersPath + separator + nodeInfo.second[0] + separator + nodeInfo.second[1];
+            string filePath = (isDynamic ? dynamicPath : staticPath) + separator + nodeInfo.second[2];
+
+            ifstream finHeader(headerPath);
+            ifstream finFile(filePath);
+
+            if (!finHeader.is_open()) {
+                throw runtime_error("无法打开文件: " + headerPath);
             }
-            else if(nodeType=="University" || nodeType=="Company") {
-                OrganisationMap[to_string(node.node_id_)] = node;
-                OrganisationIDMap[id.toString()] = to_string(node.node_id_);
+            if (!finFile.is_open()) {
+                throw runtime_error("无法打开文件: " + filePath);
             }
-            else if(nodeType=="City" || nodeType=="Country"){
-                PlaceMap[to_string(node.node_id_)] = node;
-                PlaceIDMap[id.toString()] = to_string(node.node_id_);
+
+            std::vector<string> props;
+            string fromType, toType, attribute;
+            while (getline(finHeader, line1)) {
+                props = split(line1, '|');
+                attribute = "";
+
+                // 正则表达式匹配括号中的内容
+                std::regex pattern(R"(\(([^)]+)\))");  // 匹配括号内的内容
+                std::smatch matches;
+
+                if(!std::regex_search(props[0], matches, pattern)) {
+                    throw runtime_error("无法从 " + props[0] + " 中解析出fromType");
+                }
+                fromType = matches[1];
+
+                if(!std::regex_search(props[1], matches, pattern)) {
+                    throw runtime_error("无法从 " + props[1] + " 中解析出toType");
+                }
+                toType = matches[1];
+
+                if(props.size()==3) attribute = props[2];
+
+                cout << "fromType: " << fromType << " toType: " << toType << "\n";
+            }
+
+            auto fromIDMapIt = type2IDMap.find(fromType);
+            auto fromNodeMapIt = type2Map.find(fromType);
+            auto toIDMapIt = type2IDMap.find(toType);
+            auto toNodeMapIt = type2Map.find(toType);
+
+
+            auto& fromIDMap = *fromIDMapIt->second;
+            auto& fromNodeMap = *fromNodeMapIt->second;
+            auto& toIDMap = *toIDMapIt->second;
+            auto& toNodeMap = *toNodeMapIt->second;
+
+            while (getline(finFile, line1)) {
+                vector<string> stringContents = split(line1, '|');
+                if (props.size() != stringContents.size()) {
+                    throw runtime_error("第 " + line1 + " 行: 属性数量与内容数量不匹配");
+                }
+                string id1 = stringContents[0];
+                string id2 = stringContents[1];
+
+                if (fromIDMap.find(id1) == fromIDMap.end()) {
+                    throw runtime_error("ID: " + id1 + " 不在 " + fromType + " ID Map中");
+                }
+                string index1 = fromIDMap[id1];
+
+                if (toIDMap.find(id2) == toIDMap.end()) {
+                    throw runtime_error("ID: " + id2 + " 不在 " + toType + " ID Map中");
+                }
+                string index2 = toIDMap[id2];
+
+                auto fromNodeIt = fromNodeMap.find(index1);
+                if (fromNodeIt == fromNodeMap.end()) {
+                    throw runtime_error("Index: " + index1 + " 不在 " + fromType + " Map中");
+                }
+                Node fromNode = fromNodeMap[index1];
+
+                auto toNodeIt = toNodeMap.find(index2);
+                if (toNodeIt == toNodeMap.end()) {
+                    throw runtime_error("Index: " + index2 + " 不在 " + toType + " Map中");
+                }
+                Node toNode = toNodeMap[index2];
+
+                string attributeValue;
+                if (props.size() == 3) attributeValue = stringContents[2];
+
+                // 将字符串中的所有字符转换为大写
+                string upperFromType = fromType;
+                string upperToType = toType;
+                std::transform(upperFromType.begin(), upperFromType.end(), upperFromType.begin(), ::toupper);
+                std::transform(upperToType.begin(), upperToType.end(), upperToType.begin(), ::toupper);
+                string relationName = upperFromType + "_" + upperToType;
+
+                // 直接在map中修改节点
+                fromNodeIt->second.addRelation(relationName, index2, attribute, attributeValue);
             }
         }
-
-        cout << nodeType<< "Mapsize: " << type2Map[nodeType].size() << "\n";
+        
+    } catch (const exception& e) {
+        cout << "读取数据时发生错误: " << e.what() << endl;
+        return 1;
     }
-    cout << "--------------------------------\n";
-
-    //建立节点之间的关系
-    for(auto& nodeInfo: nodeType2RelationFile) {
-        string nodeType = nodeInfo.first;
-        bool isDynamic = (nodeInfo.second[0] == "dynamic");
-
-        string headerPath = headersPath + separator + nodeInfo.second[0] + separator + nodeInfo.second[1];
-        string filePath = (isDynamic ? dynamicPath : staticPath) + separator + nodeInfo.second[2];
-
-        ifstream finHeader(headerPath);
-        ifstream finFile(filePath);
-
-        if (!finHeader.is_open()) {
-            cout << "Failed to open " << headerPath << endl;
-            return 1;
-        }
-        if (!finFile.is_open()) {
-            cout << "Failed to open " << filePath << endl;
-            return 1;
-        }
-
-        std::vector<string> props;
-        string fromType, toType, attribute;
-        while (getline(finHeader, line1)) {
-            props = split(line1, '|');
-            attribute = "";
-
-            // 正则表达式匹配括号中的内容
-            std::regex pattern(R"(\(([^)]+)\))");  // 匹配括号内的内容
-            std::smatch matches;
-
-            std::regex_search(props[0], matches, pattern);
-            fromType = matches[1];
-
-            std::regex_search(props[1], matches, pattern);
-            toType = matches[1];
-
-            if(props.size()==3) attribute = props[2];
-
-            cout << "fromType: " << fromType << " toType: " << toType << "\n";
-        }
-
-        while (getline(finFile, line1)) {
-            vector<string> stringContents = split(line1, '|');
-            if (props.size() != stringContents.size()) {
-                cout << "Props and contents size not equal.";
-                return 1;
-            }
-            string id1 = stringContents[0];
-            string id2 = stringContents[1];
-            string index1 = type2IDMap[fromType][id1];
-            string index2 = type2IDMap[toType][id2];
-
-            string attributeValue;
-            if(props.size()==3) attributeValue = stringContents[2];
-
-            Node fromNode = type2Map[fromType][index1];
-            Node toNode = type2Map[fromType][index1];
-
-            // 将字符串中的所有字符转换为大写
-            std::transform(fromType.begin(), fromType.end(), fromType.begin(), ::toupper);
-            std::transform(toType.begin(), toType.end(), toType.begin(), ::toupper);
-            string relationName = fromType + "_" + toType;
-            fromNode.addRelation(relationName, index2, attribute, attributeValue);
-
-            type2Map[fromType][index1] = fromNode;
-        }
-    }
-    cout << "--------------------------------\n";
-
-    string check = OrganisationIDMap["0"];
-    Node node = OrganisationMap[check];
-    cout << node.relations["ORGANISATION_PLACE"][0].first;
+    // 测试
+    cout << "--------------------------------check--------------------------------\n";
+    string from_id = "7";
+    string from_index = OrganisationIDMap[from_id];
+    Node from_node = OrganisationMap[from_index];
+    string to_index = from_node.relations["ORGANISATION_PLACE"][0].first;
+    Node to_node = PlaceMap[to_index];
+    string to_id = to_node.columns["id:ID(Place)"].toString();
+    cout << "from_node: \n";
+    from_node.print();
+    cout << "to_node: \n";
+    to_node.print();
+    cout << "出点的index： " << to_index << '\n';
+    cout << "出点的id: " << to_id << '\n';
 
     return 1;
 

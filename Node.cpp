@@ -58,7 +58,10 @@ void Node::setLabel(const std::string &label_string) {
 }
 
 void Node::setValues(const std::string &prop_string, const GPStore::Value *value) {
-    this->columns[prop_string] = *value;
+    if (value != nullptr) {
+        this->columns[prop_string] = *value;
+        delete value; // 删除传入的指针
+    }
 }
 
 void Node::print() {
