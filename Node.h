@@ -10,13 +10,10 @@ class Node {
   std::string label_string; //node的Type
   std::unordered_map<std::string,GPStore::Value> columns;  //node的属性
 
-  /**
-   * node和其他node的关系
-   * 第一个参数为关系的类型，eg： PERSON_PLACE
-   * 第二个参数为存放的node的总编号
-   */
-  unordered_map<string, vector<pair<string, string>>> relations;
+  unordered_map<string, vector<string>> inRelations;
+  unordered_map<string, vector<string>> outRelations;
   unordered_map<string, string> relationsProp;
+  unordered_map<string, string> typeToRelation;
 
   Node()=default;
   Node(const std::string& label_string, const std::string& prop_string, const GPStore::Value* value);
@@ -29,16 +26,18 @@ class Node {
   void GetLinkedNodesWithEdgeProps(const std::string& pre_str, std::shared_ptr<const unsigned[]>& nodes_list, std::shared_ptr<const long long[]>& prop_list,
                                    unsigned& prop_len, unsigned& list_len, char edge_dir);
 
-  void setLabel(const std::string& label_string);
+  void setLabel(const std::string& basic_string);
   void setValues(const std::string& prop_string, const GPStore::Value* value);
 
-  void addRelation(std::string relationName, std::string index, std::string prop, std::string propValue);
-
+  void addRelation(int direct, std::string relationName, std::string index, std::string prop, std::string propValue);
+  void changeTypeToRelation(string name, string relname);
   void print();
 };
 
 
 // 不同节点的列表，格式为id2Node
+extern std::unordered_map<std::string, Node> totalMap;
+
 extern std::unordered_map<std::string, Node> PersonMap;
 
 extern std::unordered_map<std::string, Node> OrganisationMap;

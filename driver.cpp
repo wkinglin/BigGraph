@@ -172,12 +172,12 @@ int main(int argc, char *argv[]) {
     };
 
     std::unordered_map<string,std::vector<string>> nodeType2RelationFile={
-            {"Person",{"dynamic", "Person_knows_Person.csv", "person_knows_person_0_0.csv"}},
-            {"Person",{"dynamic", "Person_isLocatedIn_City.csv", "person_isLocatedIn_place_0_0.csv"}},
-            {"Person",{"dynamic", "Person_studyAt_University.csv", "person_studyAt_organisation_0_0.csv"}},
-            {"Person",{"dynamic", "Person_workAt_Company.csv", "person_workAt_organisation_0_0.csv"}},
-//            {"Comment",{"dynamic", "Comment_hasCreator_Person.csv", "comment_hasCreator_person_0_0.csv"}},
-//            {"Post",{"dynamic", "Post_hasCreator_Person.csv", "post_hasCreator_person_0_0.csv"}},
+            {"Person_1",{"dynamic", "Person_knows_Person.csv", "person_knows_person_0_0.csv"}},
+            {"Person_2",{"dynamic", "Person_isLocatedIn_City.csv", "person_isLocatedIn_place_0_0.csv"}},
+            {"Person_3",{"dynamic", "Person_studyAt_University.csv", "person_studyAt_organisation_0_0.csv"}},
+            {"Person_4",{"dynamic", "Person_workAt_Company.csv", "person_workAt_organisation_0_0.csv"}},
+            {"Comment",{"dynamic", "Comment_hasCreator_Person.csv", "comment_hasCreator_person_0_0.csv"}},
+            {"Post",{"dynamic", "Post_hasCreator_Person.csv", "post_hasCreator_person_0_0.csv"}},
             {"Organisation",{"static", "Organisation_isLocatedIn_Place.csv", "organisation_isLocatedIn_place_0_0.csv"}},
     };
 
@@ -237,7 +237,8 @@ int main(int argc, char *argv[]) {
             }
             while (getline(finFile, line1)) {
                 GPStore::Value id(-1);
-                Node node(nodeId++);
+                Node node;
+                node.node_id_ = nodeId++;
                 node.setLabel(nodeType);
 
                 vector<string> stringContents = split(line1, '|');
@@ -289,6 +290,9 @@ int main(int argc, char *argv[]) {
                 innerMap[nodeIdStr] = node;
                 innerIDMap[id.toString()] = nodeIdStr;
 
+                // 添加全局Map
+                totalMap[nodeIdStr] = node;
+
                 // 对父类进行处理
                 if(nodeType=="Post" || nodeType=="Comment") {
                     MessageMap[to_string(node.node_id_)] = node;
@@ -309,8 +313,8 @@ int main(int argc, char *argv[]) {
         cout << "--------------------------------\n";
 
         //建立节点之间的关系
-        for(auto& nodeInfo: nodeType2RelationFile) {
-            string nodeType = nodeInfo.first;
+        for(auto& nodeInfo: nodeType2RelationFile) {   
+            string nodeType = nodeInfo.first.substr(0, nodeInfo.first.find('_'));
             bool isDynamic = (nodeInfo.second[0] == "dynamic");
 
             string headerPath = headersPath + separator + nodeInfo.second[0] + separator + nodeInfo.second[1];
@@ -325,6 +329,9 @@ int main(int argc, char *argv[]) {
             if (!finFile.is_open()) {
                 throw runtime_error("无法打开文件: " + filePath);
             }
+
+            //关系名称
+            string relationName = nodeInfo.second[1].substr(nodeInfo.second[1].find('_') + 1, nodeInfo.second[1].rfind('_') - nodeInfo.second[1].find('_') - 1);
 
             std::vector<string> props;
             string fromType, toType, attribute;
@@ -400,10 +407,14 @@ int main(int argc, char *argv[]) {
                 string upperToType = toType;
                 std::transform(upperFromType.begin(), upperFromType.end(), upperFromType.begin(), ::toupper);
                 std::transform(upperToType.begin(), upperToType.end(), upperToType.begin(), ::toupper);
-                string relationName = upperFromType + "_" + upperToType;
 
                 // 直接在map中修改节点
-                fromNodeIt->second.addRelation(relationName, index2, attribute, attributeValue);
+                fromNodeIt->second.addRelation(1, relationName, index2, attribute, attributeValue);
+                toNodeIt->second.addRelation(0, relationName, index1, attribute, attributeValue);
+                // 为两个节点建立类型到关系名的映射
+                string relationType = upperFromType + "_" + upperToType;
+                fromNodeIt->second.changeTypeToRelation(relationType, relationName);
+                toNodeIt->second.changeTypeToRelation(relationType, relationName);
             }
         }
         
@@ -411,12 +422,15 @@ int main(int argc, char *argv[]) {
         cout << "读取数据时发生错误: " << e.what() << endl;
         return 1;
     }
+
     // 测试
     cout << "--------------------------------check--------------------------------\n";
     string from_id = "7";
     string from_index = OrganisationIDMap[from_id];
     Node from_node = OrganisationMap[from_index];
-    string to_index = from_node.relations["ORGANISATION_PLACE"][0].first;
+    string target = from_node.outRelations["isLocatedIn"][0];
+    size_t pos = target.find('|');
+    string to_index = target.substr(0, pos);
     Node to_node = PlaceMap[to_index];
     string to_id = to_node.columns["id:ID(Place)"].toString();
     cout << "from_node: \n";
@@ -426,7 +440,7 @@ int main(int argc, char *argv[]) {
     cout << "出点的index： " << to_index << '\n';
     cout << "出点的id: " << to_id << '\n';
 
-    return 1;
+
 
     // Repeatedly read test cases from stdin
     string line;
