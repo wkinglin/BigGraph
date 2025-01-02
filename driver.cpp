@@ -116,6 +116,79 @@ bool compareResults(std::vector<std::vector<GPStore::Value>> &result, std::vecto
     return true;
 }
 
+stringstream mmapRead(const string& path) {
+#ifdef _WIN32
+    HANDLE hFile = CreateFileA(path.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL,
+                               OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFile == INVALID_HANDLE_VALUE) {
+        throw runtime_error("无法打开文件: " + path);
+    }
+
+    HANDLE hMapping = CreateFileMapping(hFile, NULL, PAGE_READONLY, 0, 0, NULL);
+    if (!hMapping) {
+        CloseHandle(hFile);
+        throw runtime_error("无法创建文件映射: " + path);
+    }
+
+    void* fileData = MapViewOfFile(hMapping, FILE_MAP_READ, 0, 0, 0);
+    if (!fileData) {
+        CloseHandle(hMapping);
+        CloseHandle(hFile);
+        throw runtime_error("无法映射文件视图: " + path);
+    }
+
+    LARGE_INTEGER fileSize;
+    GetFileSizeEx(hFile, &fileSize);
+
+    stringstream ss(string(static_cast<char*>(fileData), fileSize.QuadPart));
+
+    UnmapViewOfFile(fileData);
+    CloseHandle(hMapping);
+    CloseHandle(hFile);
+
+    return ss;
+#else
+    int fd = open(path.c_str(), O_RDONLY);
+        if (fd == -1) {
+            throw runtime_error("无法打开文件: " + path);
+        }
+
+        struct stat sb;
+        if (fstat(fd, &sb) == -1) {
+            close(fd);
+            throw runtime_error("无法获取文件状态: " + path);
+        }
+
+        void* addr = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+        if (addr == MAP_FAILED) {
+            close(fd);
+            throw runtime_error("无法映射文件: " + path);
+        }
+
+        stringstream ss(string(static_cast<char*>(addr), sb.st_size));
+
+        munmap(addr, sb.st_size);
+        close(fd);
+
+        return ss;
+#endif
+}
+
+stringstream fastRead(const string& path){
+    ifstream finFile(path, std::ios::binary);
+    if (!finFile.is_open()) {
+        throw runtime_error("无法打开文件: " + path);
+    }
+    vector<char> buf(finFile.seekg(0, std::ios::end).tellg());
+    finFile.seekg(0, std::ios::beg).read(&buf[0], static_cast<std::streamsize>(buf.size()));
+    finFile.close();
+    // 处理buffer中的数据
+    stringstream ss(string(buf.begin(), buf.end()));
+    return ss;
+}
+
+
+
 int main(int argc, char *argv[]) {
     if (argc != 2) {
         cout << "Usage: " << argv[0] << " <sf in {0.1, 3}>" << endl;
@@ -217,29 +290,26 @@ int main(int argc, char *argv[]) {
             string nodeType = nodeInfo.first;
             bool isDynamic = (nodeInfo.second[0] == "dynamic");
 
+
             string headerPath = headersPath + separator + nodeInfo.second[0] + separator + nodeInfo.second[1];
             string filePath = (isDynamic ? dynamicPath : staticPath) + separator + nodeInfo.second[2];
 
-            ifstream finHeader(headerPath);
-            ifstream finFile(filePath);
+            clock_t start = clock();
+            stringstream ssHeader = fastRead(headerPath);
+            stringstream ssFile = fastRead(filePath);
+
+            clock_t end = clock();
+            cout << "节点读取时间 : " << ((double)end - start) / CLOCKS_PER_SEC << "s\n";
 
             std::vector<string> props;
 
-            if (!finHeader.is_open()) {
-                cout << "Failed to open " << headerPath << endl;
-                return 1;
-            }
-            if (!finFile.is_open()) {
-                cout << "Failed to open " << filePath << endl;
-                return 1;
-            }
-            while (getline(finHeader, line1)) {
+            while (getline(ssHeader, line1)) {
                 props = split(line1, '|');
                 //  提取的header内容
                 for (auto &item: props) cout << item << " ";
                 cout << "\n";
             }
-            while (getline(finFile, line1)) {
+            while (getline(ssFile, line1)) {
                 GPStore::Value id(-1);
                 Node* node = new Node();
                 node->node_id_ = nodeId++;
@@ -317,22 +387,19 @@ int main(int argc, char *argv[]) {
         cout << "--------------------------------\n";
 
         //建立节点之间的关系
-        for(auto& nodeInfo: nodeType2RelationFile) {   
+        for(auto& nodeInfo: nodeType2RelationFile) {
             string nodeType = nodeInfo.first.substr(0, nodeInfo.first.find('_'));
             bool isDynamic = (nodeInfo.second[0] == "dynamic");
 
             string headerPath = headersPath + separator + nodeInfo.second[0] + separator + nodeInfo.second[1];
             string filePath = (isDynamic ? dynamicPath : staticPath) + separator + nodeInfo.second[2];
 
-            ifstream finHeader(headerPath);
-            ifstream finFile(filePath);
+            clock_t start = clock();
+            stringstream ssHeader = fastRead(headerPath);
+            stringstream ssFile = fastRead(filePath);
 
-            if (!finHeader.is_open()) {
-                throw runtime_error("无法打开文件: " + headerPath);
-            }
-            if (!finFile.is_open()) {
-                throw runtime_error("无法打开文件: " + filePath);
-            }
+            clock_t end = clock();
+            cout << "关系读取时间 : " << ((double)end - start) / CLOCKS_PER_SEC << "s\n";
 
             //关系名称
             string relationName = nodeInfo.second[1].substr(nodeInfo.second[1].find('_') + 1, nodeInfo.second[1].rfind('_') - nodeInfo.second[1].find('_') - 1);
@@ -340,7 +407,7 @@ int main(int argc, char *argv[]) {
 
             std::vector<string> props;
             string fromType, toType, attribute;
-            while (getline(finHeader, line1)) {
+            while (getline(ssHeader, line1)) {
                 props = split(line1, '|');
                 attribute = "";
 
@@ -374,7 +441,7 @@ int main(int argc, char *argv[]) {
             auto& toIDMap = *toIDMapIt->second;
             auto& toNodeMap = *toNodeMapIt->second;
 
-            while (getline(finFile, line1)) {
+            while (getline(ssFile, line1)) {
                 vector<string> stringContents = split(line1, '|');
                 if (props.size() != stringContents.size()) {
                     throw runtime_error("第 " + line1 + " 行: 属性数量与内容数量不匹配");
@@ -415,7 +482,7 @@ int main(int argc, char *argv[]) {
                 toNode->changeTypeToRelation(relationType, relationName);
             }
         }
-        
+
     } catch (const exception& e) {
         cout << "读取数据时发生错误: " << e.what() << endl;
         return 1;

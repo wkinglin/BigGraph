@@ -6,6 +6,9 @@
 // 不同节点的列表，格式为id2Node
 std::unordered_map<std::string, Node*> totalMap;
 
+// 节点的实体id转全局id
+std::unordered_map<std::string, std::string> totalIDMap;
+
 std::unordered_map<std::string, Node*> PersonMap;
 
 std::unordered_map<std::string, Node*> OrganisationMap;
