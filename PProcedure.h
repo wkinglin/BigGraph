@@ -2,7 +2,7 @@
 #include <tuple>
 #include <algorithm>
 #include "Node.h"
-typedef unsigned TYPE_ENTITY_LITERAL_ID;
+typedef unsigned long long TYPE_ENTITY_LITERAL_ID;
 typedef int TYPE_PREDICATE_ID;
 typedef unsigned TYPE_PROPERTY_ID;
 

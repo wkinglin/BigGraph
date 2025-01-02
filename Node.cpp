@@ -85,7 +85,7 @@ Node::Node(const std::string& label_string, const std::string& prop_string, cons
     this->typeToRelation = source_node.typeToRelation;
 }
 
-Node::Node(unsigned node_id) {
+Node::Node(ull node_id) {
     // 从Map中获取对应节点
     const Node& source_node = totalMap[to_string(node_id)];
 
@@ -136,8 +136,8 @@ GPStore::Value* Node::operator[](const std::string& property_string) {
     return new GPStore::Value(-1);
 }
 
-void Node::GetLinkedNodes(const std::string& pre_str, std::shared_ptr<const unsigned[]>& nodes_list, unsigned& list_len, char edge_dir) {
-    vector<unsigned> result;
+void Node::GetLinkedNodes(const std::string& pre_str, std::shared_ptr<const ull[]>& nodes_list, ull& list_len, char edge_dir) {
+    vector<ull> result;
     
     // 根据边的方向选择要遍历的关系集合
     const auto& relations = (edge_dir == 'i') ? inRelations : outRelations;
@@ -146,7 +146,7 @@ void Node::GetLinkedNodes(const std::string& pre_str, std::shared_ptr<const unsi
     if(relations.find(pre_str) != relations.end()) {
         for(const auto& target : relations.at(pre_str)) {
             string targetIndex = target.substr(0, target.find('|'));
-            result.push_back(stoul(targetIndex));
+            result.push_back(stoull(targetIndex));
         }
     }
 
@@ -154,7 +154,7 @@ void Node::GetLinkedNodes(const std::string& pre_str, std::shared_ptr<const unsi
     list_len = result.size();
     if (list_len > 0) {
         // 创建新数组并复制结果
-        unsigned* temp = new unsigned[list_len];
+        ull* temp = new ull[list_len];
         for (size_t i = 0; i < list_len; i++) {
             temp[i] = result[i];
         }
@@ -165,9 +165,9 @@ void Node::GetLinkedNodes(const std::string& pre_str, std::shared_ptr<const unsi
 
 }
 
-void Node::GetLinkedNodesWithEdgeProps(const std::string& pre_str, std::shared_ptr<const unsigned[]>& nodes_list, std::shared_ptr<const long long[]>& prop_list,
-                                       unsigned& prop_len, unsigned& list_len, char edge_dir) {
-    vector<unsigned> node_result;
+void Node::GetLinkedNodesWithEdgeProps(const std::string& pre_str, std::shared_ptr<const ull[]>& nodes_list, std::shared_ptr<const long long[]>& prop_list,
+                                       ull& prop_len, ull& list_len, char edge_dir) {
+    vector<ull> node_result;
     vector<long long> prop_result;
     
     // 根据边的方向选择要遍历的关系集合
@@ -180,7 +180,7 @@ void Node::GetLinkedNodesWithEdgeProps(const std::string& pre_str, std::shared_p
             string targetIndex = target.substr(0, pos);
             string propValue = target.substr(pos + 1);
             
-            node_result.push_back(stoul(targetIndex));
+            node_result.push_back(stoull(targetIndex));
             prop_result.push_back(stoll(propValue));
         }
     }
@@ -191,7 +191,7 @@ void Node::GetLinkedNodesWithEdgeProps(const std::string& pre_str, std::shared_p
     
     if (list_len > 0) {
         // 创建新数组并复制结果
-        unsigned* temp_nodes = new unsigned[list_len];
+        ull* temp_nodes = new ull[list_len];
         long long* temp_props = new long long[prop_len];
         
         for (size_t i = 0; i < list_len; i++) {

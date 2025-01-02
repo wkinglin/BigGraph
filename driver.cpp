@@ -359,7 +359,7 @@ int main(int argc, char *argv[]) {
 
                 if(props.size()==3) attribute = props[2];
 
-                cout << "fromType: " << fromType << " toType: " << toType << "\n";
+                cout << "Relation Name:" << relationName << " fromType: " << fromType << " toType: " << toType << "\n";
             }
 
             auto fromIDMapIt = type2IDMap.find(fromType);
