@@ -10,7 +10,7 @@ class Node {
  public:
   ull node_id_; //每个node要维护一个新的id
   std::string label_string; //node的Type
-  std::unordered_map<std::string,GPStore::Value> columns;  //node的属性
+  std::unordered_map<std::string, GPStore::Value> columns;  //node的属性
 
   unordered_map<string, vector<string>> inRelations;
   unordered_map<string, vector<string>> outRelations;

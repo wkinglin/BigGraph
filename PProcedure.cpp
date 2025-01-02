@@ -93,7 +93,7 @@ void ic1(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStor
         for (auto vid : curr_frontier) {
         Node froniter_person(vid);
         std::shared_ptr<const TYPE_ENTITY_LITERAL_ID[]> friends_list = nullptr; ull list_len;
-        froniter_person.GetLinkedNodes("knows", friends_list, list_len, EDGE_OUT);
+        froniter_person.GetLinkedNodes("KNOWS", friends_list, list_len, EDGE_OUT);
         for (ull friend_index = 0; friend_index < list_len; ++friend_index) {
             TYPE_ENTITY_LITERAL_ID friend_vid = friends_list[friend_index];
             if (visited.find(friend_vid) == visited.end()) {
@@ -102,7 +102,7 @@ void ic1(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStor
             }
         }
         friends_list = nullptr;
-        froniter_person.GetLinkedNodes("knows", friends_list, list_len, EDGE_IN);
+        froniter_person.GetLinkedNodes("KNOWS", friends_list, list_len, EDGE_IN);
         for (ull friend_index = 0; friend_index < list_len; ++friend_index) {
             TYPE_ENTITY_LITERAL_ID friend_vid = friends_list[friend_index];
             if (visited.find(friend_vid) == visited.end()) {
@@ -179,14 +179,12 @@ void ic2(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStor
         printf("What the fuck? This Node (id: %lld) does not exist!!!\n", nodeId);
     }
     Node person(nodeId);
-    printf("totalMap size: %ld\n", totalMap.size());
-    printf("[IC2]: In Relations: %ld\n", person.inRelations.size());
-    printf("[IC2]: Out Relations: %ld\n", person.outRelations.size());
+    person.print();
 
     // 先找出这个Person的所有Friend Node
     std::shared_ptr<const TYPE_ENTITY_LITERAL_ID[]> friends_list = nullptr; // 这个list里面存着所有Friend Node的ID
     ull list_len;
-    person.GetLinkedNodes("knows", friends_list, list_len, EDGE_OUT);
+    person.GetLinkedNodes("KNOWS", friends_list, list_len, EDGE_OUT);
     printf("[IC2]: This person has %lld friends!\n", list_len);
 
     // 对每一个Friend Node，找出它的所有Message
@@ -196,7 +194,7 @@ void ic2(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStor
         Node friend_node(friends_list[i]);
         std::shared_ptr<const TYPE_ENTITY_LITERAL_ID[]> msg_list = nullptr; // 这个list里面存着这个人所有Message Node的ID
         ull msg_list_len;
-        friend_node.GetLinkedNodes("hasCreator", msg_list, msg_list_len, EDGE_IN);
+        friend_node.GetLinkedNodes("HASCREATOR", msg_list, msg_list_len, EDGE_IN);
         // 将这些Messages放入列表中
         for(int j = 0;j<msg_list_len;j++)
         {
