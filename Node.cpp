@@ -4,21 +4,21 @@
 
 
 // 不同节点的列表，格式为id2Node
-std::unordered_map<std::string, Node> totalMap;
+std::unordered_map<std::string, Node*> totalMap;
 
-std::unordered_map<std::string, Node> PersonMap;
+std::unordered_map<std::string, Node*> PersonMap;
 
-std::unordered_map<std::string, Node> OrganisationMap;
-std::unordered_map<std::string, Node> CityMap;
-std::unordered_map<std::string, Node> CompanyMap;
+std::unordered_map<std::string, Node*> OrganisationMap;
+std::unordered_map<std::string, Node*> CityMap;
+std::unordered_map<std::string, Node*> CompanyMap;
 
-std::unordered_map<std::string, Node> PlaceMap;
-std::unordered_map<std::string, Node> UniversityMap;
-std::unordered_map<std::string, Node> CountryMap;
+std::unordered_map<std::string, Node*> PlaceMap;
+std::unordered_map<std::string, Node*> UniversityMap;
+std::unordered_map<std::string, Node*> CountryMap;
 
-std::unordered_map<std::string, Node> MessageMap;
-std::unordered_map<std::string, Node> PostMap;
-std::unordered_map<std::string, Node> CommentMap;
+std::unordered_map<std::string, Node*> MessageMap;
+std::unordered_map<std::string, Node*> PostMap;
+std::unordered_map<std::string, Node*> CommentMap;
 
 // 节点的实体id转全局id
 std::unordered_map<std::string, std::string> PersonIDMap;
@@ -35,7 +35,7 @@ std::unordered_map<std::string, std::string> MessageIDMap;
 std::unordered_map<std::string, std::string> PostIDMap;
 std::unordered_map<std::string, std::string> CommentIDMap;
 
-std::unordered_map<string, std::unordered_map<string, Node>*> type2Map={
+std::unordered_map<string, std::unordered_map<string, Node*>*> type2Map={
         {"Person", &PersonMap},
         {"Comment", &CommentMap},
         {"Post", &PostMap},
@@ -73,30 +73,30 @@ Node::Node(const std::string& label_string, const std::string& prop_string, cons
     string index = innerIDMap[value->toString()];
     
     // 从Map中获取对应节点
-    const Node& source_node = innerMap[index];
+    Node* source_node = innerMap[index];
     
     // 复制节点的所有属性到当前对象
-    this->node_id_ = source_node.node_id_;
-    this->label_string = source_node.label_string;
-    this->columns = source_node.columns;
-    this->inRelations = source_node.inRelations;
-    this->outRelations = source_node.outRelations;
-    this->relationsProp = source_node.relationsProp;
-    this->typeToRelation = source_node.typeToRelation;
+    this->node_id_ = source_node->node_id_;
+    this->label_string = source_node->label_string;
+    this->columns = source_node->columns;
+    this->inRelations = source_node->inRelations;
+    this->outRelations = source_node->outRelations;
+    this->relationsProp = source_node->relationsProp;
+    this->typeToRelation = source_node->typeToRelation;
 }
 
-Node::Node(unsigned node_id) {
-    // 从Map中获取对应节点
-    const Node& source_node = totalMap[to_string(node_id)];
+Node::Node(ull node_id) {
+    // 从totalMap中获取对应节点
+    Node* source_node = totalMap[to_string(node_id)];
 
     // 复制节点的所有属性到当前对象
-    this->node_id_ = source_node.node_id_;
-    this->label_string = source_node.label_string;
-    this->columns = source_node.columns;
-    this->inRelations = source_node.inRelations;
-    this->outRelations = source_node.outRelations;
-    this->relationsProp = source_node.relationsProp;
-    this->typeToRelation = source_node.typeToRelation;
+    this->node_id_ = source_node->node_id_;
+    this->label_string = source_node->label_string;
+    this->columns = source_node->columns;
+    this->inRelations = source_node->inRelations;
+    this->outRelations = source_node->outRelations;
+    this->relationsProp = source_node->relationsProp;
+    this->typeToRelation = source_node->typeToRelation;
 }
 
 GPStore::Value* Node::operator[](const std::string& property_string) {
@@ -133,11 +133,11 @@ GPStore::Value* Node::operator[](const std::string& property_string) {
     }
     
     // 如果都找不到,返回一个空值
-    return new GPStore::Value(-1);
+    return new GPStore::Value();
 }
 
-void Node::GetLinkedNodes(const std::string& pre_str, std::shared_ptr<const unsigned[]>& nodes_list, unsigned& list_len, char edge_dir) {
-    vector<unsigned> result;
+void Node::GetLinkedNodes(const std::string& pre_str, std::shared_ptr<const ull[]>& nodes_list, ull& list_len, char edge_dir) {
+    vector<ull> result;
     
     // 根据边的方向选择要遍历的关系集合
     const auto& relations = (edge_dir == 'i') ? inRelations : outRelations;
@@ -146,7 +146,7 @@ void Node::GetLinkedNodes(const std::string& pre_str, std::shared_ptr<const unsi
     if(relations.find(pre_str) != relations.end()) {
         for(const auto& target : relations.at(pre_str)) {
             string targetIndex = target.substr(0, target.find('|'));
-            result.push_back(stoul(targetIndex));
+            result.push_back(stoull(targetIndex));
         }
     }
 
@@ -154,7 +154,7 @@ void Node::GetLinkedNodes(const std::string& pre_str, std::shared_ptr<const unsi
     list_len = result.size();
     if (list_len > 0) {
         // 创建新数组并复制结果
-        unsigned* temp = new unsigned[list_len];
+        ull* temp = new ull[list_len];
         for (size_t i = 0; i < list_len; i++) {
             temp[i] = result[i];
         }
@@ -162,12 +162,11 @@ void Node::GetLinkedNodes(const std::string& pre_str, std::shared_ptr<const unsi
     } else {
         nodes_list = nullptr;
     }
-
 }
 
-void Node::GetLinkedNodesWithEdgeProps(const std::string& pre_str, std::shared_ptr<const unsigned[]>& nodes_list, std::shared_ptr<const long long[]>& prop_list,
-                                       unsigned& prop_len, unsigned& list_len, char edge_dir) {
-    vector<unsigned> node_result;
+void Node::GetLinkedNodesWithEdgeProps(const std::string& pre_str, std::shared_ptr<const ull[]>& nodes_list, std::shared_ptr<const long long[]>& prop_list,
+                                       ull& prop_len, ull& list_len, char edge_dir) {
+    vector<ull> node_result;
     vector<long long> prop_result;
     
     // 根据边的方向选择要遍历的关系集合
@@ -180,7 +179,7 @@ void Node::GetLinkedNodesWithEdgeProps(const std::string& pre_str, std::shared_p
             string targetIndex = target.substr(0, pos);
             string propValue = target.substr(pos + 1);
             
-            node_result.push_back(stoul(targetIndex));
+            node_result.push_back(stoull(targetIndex));
             prop_result.push_back(stoll(propValue));
         }
     }
@@ -191,7 +190,7 @@ void Node::GetLinkedNodesWithEdgeProps(const std::string& pre_str, std::shared_p
     
     if (list_len > 0) {
         // 创建新数组并复制结果
-        unsigned* temp_nodes = new unsigned[list_len];
+        ull* temp_nodes = new ull[list_len];
         long long* temp_props = new long long[prop_len];
         
         for (size_t i = 0; i < list_len; i++) {

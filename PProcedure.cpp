@@ -1,6 +1,6 @@
 #include "PProcedure.h"
 using namespace std;
-const unsigned LIMIT_NUM = 20;
+const ull LIMIT_NUM = 20;
 const char EDGE_IN = 'i';
 const char EDGE_OUT = 'o';
 
@@ -8,11 +8,11 @@ void ProcessMessageLikes(Node &message, long long message_id, long long message_
 const std::string &message_content, Node &other_person, std::map<TYPE_ENTITY_LITERAL_ID, long long> &person_id_map,
 std::map<long long, std::pair<long long, long long> > &candidates_index, std::map<std::pair<long long, long long>, std::tuple<long long, long long, std::string, int> > &candidates) {
     std::shared_ptr<const TYPE_ENTITY_LITERAL_ID[]> person_friends = nullptr;
-    unsigned friends_num = 0;
+    ull friends_num = 0;
     std::shared_ptr<const long long[]> creation_date_list = nullptr;
-    unsigned creation_data_width = 0;
+    ull creation_data_width = 0;
     message.GetLinkedNodesWithEdgeProps("LIKES", person_friends, creation_date_list, creation_data_width, friends_num, EDGE_IN);
-    for (unsigned j = 0; j < friends_num; ++j) {
+    for (ull j = 0; j < friends_num; ++j) {
         auto person_vid = person_friends[j];
         long long like_creation_date = creation_date_list[j];
         auto it = candidates_index.find(person_vid);
@@ -61,11 +61,11 @@ std::map<long long, std::pair<long long, long long> > &candidates_index, std::ma
 void ic1(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStore::Value>> &result) {
     string first_name = args[1].toString();
     const char* first_name_char = first_name.data();
-    unsigned first_name_size = first_name.size();
+    ull first_name_size = first_name.size();
     Node person_node("Person", "id", &args[0]);
     if (person_node.node_id_ == -1)
         return;
-    std::set<std::tuple<int, std::string, long long, unsigned> > candidates;
+    std::set<std::tuple<int, std::string, long long, ull> > candidates;
     TYPE_ENTITY_LITERAL_ID start_vid = person_node.node_id_;
     std::vector<TYPE_ENTITY_LITERAL_ID> curr_frontier({start_vid});
     std::set<TYPE_ENTITY_LITERAL_ID> visited({start_vid});
@@ -92,7 +92,7 @@ void ic1(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStor
         if (candidates.size() >= LIMIT_NUM || distance == 3) break;
         for (auto vid : curr_frontier) {
             Node froniter_person(vid);
-            std::shared_ptr<const TYPE_ENTITY_LITERAL_ID[]> friends_list = nullptr; unsigned list_len;
+            std::shared_ptr<const TYPE_ENTITY_LITERAL_ID[]> friends_list = nullptr; ull list_len;
             froniter_person.GetLinkedNodes("KNOWS", friends_list, list_len, EDGE_OUT);
             for (unsigned friend_index = 0; friend_index < list_len; ++friend_index) {
                 TYPE_ENTITY_LITERAL_ID friend_vid = friends_list[friend_index];
@@ -106,8 +106,8 @@ void ic1(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStor
             for (unsigned friend_index = 0; friend_index < list_len; ++friend_index) {
                 TYPE_ENTITY_LITERAL_ID friend_vid = friends_list[friend_index];
                 if (visited.find(friend_vid) == visited.end()) {
-                visited.emplace(friend_vid);
-                next_frontier.emplace_back(friend_vid);
+                    visited.emplace(friend_vid);
+                    next_frontier.emplace_back(friend_vid);
                 }
             }
             friends_list = nullptr;
@@ -117,7 +117,7 @@ void ic1(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStor
     }
 
     for (const auto & tup : candidates) {
-        unsigned vid = std::get<3>(tup);
+        ull vid = std::get<3>(tup);
         Node person(vid);
 
         result.emplace_back();
@@ -134,11 +134,11 @@ void ic1(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStor
         result.back().emplace_back(*person["language"]);
         result.back().emplace_back(*Node(person["PERSON_PLACE"]->toLLong())["name"]);   // TODO: PERSON_PLACE not in original data
 
-        std::shared_ptr<const unsigned[]> list = nullptr; unsigned list_len = 0;
-        std::shared_ptr<const long long[]> prop_list = nullptr; unsigned prop_len = 0;
+        std::shared_ptr<const ull[]> list = nullptr; ull list_len = 0;
+        std::shared_ptr<const long long[]> prop_list = nullptr; ull prop_len = 0;
 
         result.back().emplace_back(GPStore::Value::Type::LIST);
-        person.GetLinkedNodesWithEdgeProps("STUDY_AT", list, prop_list, prop_len, list_len, EDGE_OUT);
+        person.GetLinkedNodesWithEdgeProps("STUDYAT", list, prop_list, prop_len, list_len, EDGE_OUT);
         for (unsigned i = 0; i < list_len; ++i) {
             Node university(list[i]);
             Node location_city(university["ORGANISATION_PLACE"]->toLLong());    // TODO: "ORGANISATION_PLACE"
@@ -148,7 +148,7 @@ void ic1(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStor
         list = nullptr; prop_list = nullptr;
 
         result.back().emplace_back(GPStore::Value::Type::LIST);
-        person.GetLinkedNodesWithEdgeProps("WORK_AT", list, prop_list, prop_len, list_len, EDGE_OUT);
+        person.GetLinkedNodesWithEdgeProps("WORKAT", list, prop_list, prop_len, list_len, EDGE_OUT);
         for (unsigned i = 0; i < list_len; ++i) {
             Node company(list[i]);
             Node location_country(company["ORGANISATION_PLACE"]->toLLong());
@@ -159,6 +159,105 @@ void ic1(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStor
 }
 
 void ic2(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStore::Value>> &result) {
+    // 解析参数：personId和maxDate
+    TYPE_ENTITY_LITERAL_ID personId = args[0].toLLong();
+    GPStore::Value maxDate = args[1];
+
+    // 通过personId找到其对应的nodeId
+    TYPE_ENTITY_LITERAL_ID nodeId = 0;
+    if(PersonIDMap.find(to_string(personId))==PersonIDMap.end())
+    {
+        printf("What the fuck? This person (id: %lld) does not exist!!!\n", personId);
+    }
+    else
+    {
+        nodeId = stoll(PersonIDMap[to_string(personId)]);
+    }
+    if(totalMap.find(to_string(nodeId))==totalMap.end())
+    {
+        printf("What the fuck? This Node (id: %lld) does not exist!!!\n", nodeId);
+    }
+    Node person(nodeId);
+
+    // 先找出这个Person的所有Friend Node
+    std::shared_ptr<const TYPE_ENTITY_LITERAL_ID[]> friends_list = nullptr; // 这个list里面存着所有Friend Node的ID
+    std::shared_ptr<const TYPE_ENTITY_LITERAL_ID[]> friends_list_in = nullptr; // 这个list里面存着所有Friend Node的ID
+    ull list_len, list_len1;
+    person.GetLinkedNodes("KNOWS", friends_list, list_len, EDGE_OUT);
+    person.GetLinkedNodes("KNOWS", friends_list_in, list_len1, EDGE_IN);
+
+    // 对每一个Friend Node，找出它的所有Message
+    vector<pair<Node, Node>> messages = vector<pair<Node, Node>>();
+    for(int i = 0;i<list_len;i++)
+    {
+        Node friend_node(friends_list[i]);
+        std::shared_ptr<const TYPE_ENTITY_LITERAL_ID[]> msg_list = nullptr; // 这个list里面存着这个人所有Message Node的ID
+        ull msg_list_len;
+        friend_node.GetLinkedNodes("HASCREATOR", msg_list, msg_list_len, EDGE_IN);
+        // 将这些Messages放入列表中
+        for(int j = 0;j<msg_list_len;j++)
+        {
+            Node msg(msg_list[j]);
+            messages.emplace_back(friend_node, msg);
+        }
+    }
+    for(int i = 0;i<list_len1;i++)
+    {
+        Node friend_node(friends_list_in[i]);
+        std::shared_ptr<const TYPE_ENTITY_LITERAL_ID[]> msg_list = nullptr; // 这个list里面存着这个人所有Message Node的ID
+        ull msg_list_len;
+        friend_node.GetLinkedNodes("HASCREATOR", msg_list, msg_list_len, EDGE_IN);
+        // 将这些Messages放入列表中
+        for(int j = 0;j<msg_list_len;j++)
+        {
+            Node msg(msg_list[j]);
+            messages.emplace_back(friend_node, msg);
+        }
+    }
+
+    // 对这些Messages排序
+    struct sort_function{
+        bool operator()(pair<Node,Node> x, pair<Node,Node> y){
+            Node a = x.second;
+            Node b = y.second;
+            switch(a["creationDate"]->comp(b["creationDate"]))
+            {
+                case 1:
+                return true;
+                case 0:
+                if(a["id"]<=b["id"]) return true;
+                else return false;
+                case -1:
+                return false;
+            }
+            return false;
+        }
+    } func;
+    sort(messages.begin(), messages.end(), func);
+
+    // 选出前20个，复制到结果中
+    int cnt = 0, limit = 20;
+    for(auto message: messages)
+    {
+        Node friend_node = message.first;
+        Node msg_node = message.second;
+        if(msg_node["creationDate"]->comp(maxDate)==1) continue;
+
+        // 处理imageFile
+        GPStore::Value* content = msg_node["content"];
+        if(!content->comp(new GPStore::Value(""))) content = msg_node["imageFile"];
+
+        result.emplace_back();
+        result.back().reserve(13);
+        result.back().emplace_back(*friend_node["id"]);
+        result.back().emplace_back(*friend_node["firstName"]);
+        result.back().emplace_back(*friend_node["lastName"]);
+        result.back().emplace_back(*msg_node["id"]);
+        result.back().emplace_back(*content);
+        result.back().emplace_back(*msg_node["creationDate"]);
+        cnt++;
+        if(cnt>=limit) break;
+    }
 }
 
 void is1(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStore::Value>> &result) {

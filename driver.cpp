@@ -5,7 +5,9 @@
 #include <stack>
 #include <regex>
 #include "PProcedure.h"
+#ifdef _WIN32
 #include <windows.h>
+#endif
 using namespace std;
 
 void printResults(vector<vector<GPStore::Value>> &result) {
@@ -144,7 +146,9 @@ int main(int argc, char *argv[]) {
     if(isWindows){
         smallGraph = "..\\" + smallGraph;
         bigGraph = "..\\" + bigGraph;
+        #ifdef _WIN32
         SetConsoleOutputCP(CP_UTF8);
+        #endif
     }
 
     string headersPath, dynamicPath, staticPath;
@@ -181,7 +185,7 @@ int main(int argc, char *argv[]) {
             {"Organisation",{"static", "Organisation_isLocatedIn_Place.csv", "organisation_isLocatedIn_place_0_0.csv"}},
     };
 
-    std::unordered_map<string, std::unordered_map<string, Node>*> type2Map={
+    std::unordered_map<string, std::unordered_map<string, Node*>*> type2Map={
             {"Person", &PersonMap},
             {"Comment", &CommentMap},
             {"Post", &PostMap},
@@ -237,9 +241,9 @@ int main(int argc, char *argv[]) {
             }
             while (getline(finFile, line1)) {
                 GPStore::Value id(-1);
-                Node node;
-                node.node_id_ = nodeId++;
-                node.setLabel(nodeType);
+                Node* node = new Node();
+                node->node_id_ = nodeId++;
+                node->setLabel(nodeType);
 
                 vector<string> stringContents = split(line1, '|');
                 if (props.size() != stringContents.size()) {
@@ -273,11 +277,11 @@ int main(int argc, char *argv[]) {
                         return 1;
                     }
 
-                    node.setValues(props[i], value); // 传入动态分配的指针
+                    node->setValues(props[i], value); // 传入动态分配的指针
                 }
 
                 if(!isDynamic){
-                    string type = node.columns[":LABEL"].toString();
+                    string type = node->columns[":LABEL"].toString();
                     type = string(1, toupper(type[0])) + type.substr(1);
                     if (type != nodeType) continue;
                 }
@@ -286,7 +290,7 @@ int main(int argc, char *argv[]) {
                 auto& innerMap = *type2Map[nodeType];
                 auto& innerIDMap = *type2IDMap[nodeType];
 
-                string nodeIdStr = to_string(node.node_id_);
+                string nodeIdStr = to_string(node->node_id_);
                 innerMap[nodeIdStr] = node;
                 innerIDMap[id.toString()] = nodeIdStr;
 
@@ -295,16 +299,16 @@ int main(int argc, char *argv[]) {
 
                 // 对父类进行处理
                 if(nodeType=="Post" || nodeType=="Comment") {
-                    MessageMap[to_string(node.node_id_)] = node;
-                    MessageIDMap[id.toString()] = to_string(node.node_id_);
+                    MessageMap[to_string(node->node_id_)] = node;
+                    MessageIDMap[id.toString()] = to_string(node->node_id_);
                 }
                 else if(nodeType=="University" || nodeType=="Company") {
-                    OrganisationMap[to_string(node.node_id_)] = node;
-                    OrganisationIDMap[id.toString()] = to_string(node.node_id_);
+                    OrganisationMap[to_string(node->node_id_)] = node;
+                    OrganisationIDMap[id.toString()] = to_string(node->node_id_);
                 }
                 else if(nodeType=="City" || nodeType=="Country"){
-                    PlaceMap[to_string(node.node_id_)] = node;
-                    PlaceIDMap[id.toString()] = to_string(node.node_id_);
+                    PlaceMap[to_string(node->node_id_)] = node;
+                    PlaceIDMap[id.toString()] = to_string(node->node_id_);
                 }
             }
 
@@ -356,7 +360,7 @@ int main(int argc, char *argv[]) {
 
                 if(props.size()==3) attribute = props[2];
 
-                cout << "fromType: " << fromType << " toType: " << toType << "\n";
+                cout << "Relation Name:" << relationName << " fromType: " << fromType << " toType: " << toType << "\n";
             }
 
             auto fromIDMapIt = type2IDMap.find(fromType);
@@ -378,27 +382,19 @@ int main(int argc, char *argv[]) {
                 string id1 = stringContents[0];
                 string id2 = stringContents[1];
 
-                if (fromIDMap.find(id1) == fromIDMap.end()) {
-                    throw runtime_error("ID: " + id1 + " 不在 " + fromType + " ID Map中");
-                }
+                if (fromIDMap.find(id1) == fromIDMap.end()) throw runtime_error("ID: " + id1 + " 不在 " + fromType + " ID Map中");
                 string index1 = fromIDMap[id1];
 
-                if (toIDMap.find(id2) == toIDMap.end()) {
-                    throw runtime_error("ID: " + id2 + " 不在 " + toType + " ID Map中");
-                }
+                if (toIDMap.find(id2) == toIDMap.end()) throw runtime_error("ID: " + id2 + " 不在 " + toType + " ID Map中");
                 string index2 = toIDMap[id2];
 
                 auto fromNodeIt = fromNodeMap.find(index1);
-                if (fromNodeIt == fromNodeMap.end()) {
-                    throw runtime_error("Index: " + index1 + " 不在 " + fromType + " Map中");
-                }
-                Node fromNode = fromNodeMap[index1];
+                if (fromNodeIt == fromNodeMap.end()) throw runtime_error("Index: " + index1 + " 不在 " + fromType + " Map中");
+                Node* fromNode = fromNodeMap[index1];
 
                 auto toNodeIt = toNodeMap.find(index2);
-                if (toNodeIt == toNodeMap.end()) {
-                    throw runtime_error("Index: " + index2 + " 不在 " + toType + " Map中");
-                }
-                Node toNode = toNodeMap[index2];
+                if (toNodeIt == toNodeMap.end()) throw runtime_error("Index: " + index2 + " 不在 " + toType + " Map中");
+                Node* toNode = toNodeMap[index2];
 
                 string attributeValue;
                 if (props.size() == 3) attributeValue = stringContents[2];
@@ -410,12 +406,13 @@ int main(int argc, char *argv[]) {
                 std::transform(upperToType.begin(), upperToType.end(), upperToType.begin(), ::toupper);
 
                 // 直接在map中修改节点
-                fromNodeIt->second.addRelation(1, relationName, index2, attribute, attributeValue);
-                toNodeIt->second.addRelation(0, relationName, index1, attribute, attributeValue);
+                fromNode->addRelation(1, relationName, index2, attribute, attributeValue);
+                toNode->addRelation(0, relationName, index1, attribute, attributeValue);
+
                 // 为两个节点建立类型到关系名的映射
                 string relationType = upperFromType + "_" + upperToType;
-                fromNodeIt->second.changeTypeToRelation(relationType, relationName);
-                toNodeIt->second.changeTypeToRelation(relationType, relationName);
+                fromNode->changeTypeToRelation(relationType, relationName);
+                toNode->changeTypeToRelation(relationType, relationName);
             }
         }
         
@@ -428,16 +425,16 @@ int main(int argc, char *argv[]) {
     cout << "--------------------------------check--------------------------------\n";
     string from_id = "7";
     string from_index = OrganisationIDMap[from_id];
-    Node from_node = OrganisationMap[from_index];
-    string target = from_node.outRelations["ISLOCATEDIN"][0];
+    Node* from_node = OrganisationMap[from_index];
+    string target = from_node->outRelations["ISLOCATEDIN"][0];
     size_t pos = target.find('|');
     string to_index = target.substr(0, pos);
-    Node to_node = PlaceMap[to_index];
-    string to_id = to_node.columns["id:ID(Place)"].toString();
+    Node* to_node = PlaceMap[to_index];
+    string to_id = to_node->columns["id:ID(Place)"].toString();
     cout << "from_node: \n";
-    from_node.print();
+    from_node->print();
     cout << "to_node: \n";
-    to_node.print();
+    to_node->print();
     cout << "出点的index： " << to_index << '\n';
     cout << "出点的id: " << to_id << '\n';
 
@@ -449,7 +446,8 @@ int main(int argc, char *argv[]) {
             break;
         if (line == "builtin_test") {
             // Read test cases from file and compare the results with the ground truth
-            string groundTruthDir = "ground_truth/";
+            //string groundTruthDir = "ground_truth/";
+            string groundTruthDir = ".." + separator + "ground_truth" + separator;
             vector<string> procs = {"ic1", "ic2", "is1"};
             for (const string &proc : procs) {
                 string groundTruthFile = groundTruthDir + proc + "-sf" + sf + ".txt";
@@ -470,7 +468,7 @@ int main(int argc, char *argv[]) {
                         long long personId = stoll(personId_str);
                         args.emplace_back(personId);
                         args.emplace_back(firstName);
-                        // ic1(args, result);
+                        ic1(args, result);
                     } else if (proc == "ic2") {
                         size_t pos = line.find(" ");
                         string personId_str = line.substr(0, pos);
@@ -560,5 +558,16 @@ int main(int argc, char *argv[]) {
             printResults(result);
         }
     }
+
+    // 在程序结束时清理内存
+    for(auto& pair : totalMap) {
+        delete pair.second;
+    }
+    totalMap.clear();
+    // 其他Map只需要clear，因为它们指向的是相同的Node对象
+    PersonMap.clear();
+    OrganisationMap.clear();
+    // ... 清理其他Map ...
+
     return 0;
 }
