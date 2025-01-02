@@ -332,6 +332,7 @@ int main(int argc, char *argv[]) {
 
             //关系名称
             string relationName = nodeInfo.second[1].substr(nodeInfo.second[1].find('_') + 1, nodeInfo.second[1].rfind('_') - nodeInfo.second[1].find('_') - 1);
+            std::transform(relationName.begin(), relationName.end(), relationName.begin(), ::toupper);
 
             std::vector<string> props;
             string fromType, toType, attribute;
@@ -428,7 +429,7 @@ int main(int argc, char *argv[]) {
     string from_id = "7";
     string from_index = OrganisationIDMap[from_id];
     Node from_node = OrganisationMap[from_index];
-    string target = from_node.outRelations["isLocatedIn"][0];
+    string target = from_node.outRelations["ISLOCATEDIN"][0];
     size_t pos = target.find('|');
     string to_index = target.substr(0, pos);
     Node to_node = PlaceMap[to_index];
@@ -439,7 +440,6 @@ int main(int argc, char *argv[]) {
     to_node.print();
     cout << "出点的index： " << to_index << '\n';
     cout << "出点的id: " << to_id << '\n';
-
 
 
     // Repeatedly read test cases from stdin

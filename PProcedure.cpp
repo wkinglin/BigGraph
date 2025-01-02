@@ -73,44 +73,44 @@ void ic1(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStor
     for (int distance = 0; distance <= 3; distance++) {
         std::vector<TYPE_ENTITY_LITERAL_ID > next_frontier;
         for (const auto& vid : curr_frontier) {
-        Node froniter_person(vid);
-        bool flag = vid == start_vid;
-        flag = flag || (froniter_person["firstName"]->toString() != first_name);
-        if (flag) continue;
-        std::string last_name = froniter_person["lastName"]->toString();
-        long long person_id = froniter_person["id"]->toLLong();
-        auto tup = std::make_tuple(distance, last_name, person_id, vid);
-        if (candidates.size() >= LIMIT_NUM) {
-            auto& candidate = *candidates.rbegin();
-            if (tup > candidate) continue;
-        }
-        candidates.emplace(std::move(tup));
-        if (candidates.size() > LIMIT_NUM) {
-            candidates.erase(--candidates.end());
-        }
+            Node froniter_person(vid);
+            bool flag = vid == start_vid;
+            flag = flag || (froniter_person["firstName"]->toString() != first_name);
+            if (flag) continue;
+            std::string last_name = froniter_person["lastName"]->toString();
+            long long person_id = froniter_person["id"]->toLLong();
+            auto tup = std::make_tuple(distance, last_name, person_id, vid);
+            if (candidates.size() >= LIMIT_NUM) {
+                auto& candidate = *candidates.rbegin();
+                if (tup > candidate) continue;
+            }
+            candidates.emplace(std::move(tup));
+            if (candidates.size() > LIMIT_NUM) {
+                candidates.erase(--candidates.end());
+            }
         }
         if (candidates.size() >= LIMIT_NUM || distance == 3) break;
         for (auto vid : curr_frontier) {
-        Node froniter_person(vid);
-        std::shared_ptr<const TYPE_ENTITY_LITERAL_ID[]> friends_list = nullptr; unsigned list_len;
-        froniter_person.GetLinkedNodes("KNOWS", friends_list, list_len, EDGE_OUT);
-        for (unsigned friend_index = 0; friend_index < list_len; ++friend_index) {
-            TYPE_ENTITY_LITERAL_ID friend_vid = friends_list[friend_index];
-            if (visited.find(friend_vid) == visited.end()) {
-            visited.emplace(friend_vid);
-            next_frontier.emplace_back(friend_vid);
+            Node froniter_person(vid);
+            std::shared_ptr<const TYPE_ENTITY_LITERAL_ID[]> friends_list = nullptr; unsigned list_len;
+            froniter_person.GetLinkedNodes("KNOWS", friends_list, list_len, EDGE_OUT);
+            for (unsigned friend_index = 0; friend_index < list_len; ++friend_index) {
+                TYPE_ENTITY_LITERAL_ID friend_vid = friends_list[friend_index];
+                if (visited.find(friend_vid) == visited.end()) {
+                    visited.emplace(friend_vid);
+                    next_frontier.emplace_back(friend_vid);
+                }
             }
-        }
-        friends_list = nullptr;
-        froniter_person.GetLinkedNodes("KNOWS", friends_list, list_len, EDGE_IN);
-        for (unsigned friend_index = 0; friend_index < list_len; ++friend_index) {
-            TYPE_ENTITY_LITERAL_ID friend_vid = friends_list[friend_index];
-            if (visited.find(friend_vid) == visited.end()) {
-            visited.emplace(friend_vid);
-            next_frontier.emplace_back(friend_vid);
+            friends_list = nullptr;
+            froniter_person.GetLinkedNodes("KNOWS", friends_list, list_len, EDGE_IN);
+            for (unsigned friend_index = 0; friend_index < list_len; ++friend_index) {
+                TYPE_ENTITY_LITERAL_ID friend_vid = friends_list[friend_index];
+                if (visited.find(friend_vid) == visited.end()) {
+                visited.emplace(friend_vid);
+                next_frontier.emplace_back(friend_vid);
+                }
             }
-        }
-        friends_list = nullptr;
+            friends_list = nullptr;
         }
         std::sort(next_frontier.begin(), next_frontier.end());
         curr_frontier.swap(next_frontier);
@@ -140,20 +140,20 @@ void ic1(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStor
         result.back().emplace_back(GPStore::Value::Type::LIST);
         person.GetLinkedNodesWithEdgeProps("STUDY_AT", list, prop_list, prop_len, list_len, EDGE_OUT);
         for (unsigned i = 0; i < list_len; ++i) {
-        Node university(list[i]);
-        Node location_city(university["ORGANISATION_PLACE"]->toLLong());    // TODO: "ORGANISATION_PLACE"
-        vector<GPStore::Value *> university_prop_vec{university["name"], new GPStore::Value(prop_list[i]), location_city["name"]};
-        result.back().back().data_.List->emplace_back(new GPStore::Value(university_prop_vec, true));
+            Node university(list[i]);
+            Node location_city(university["ORGANISATION_PLACE"]->toLLong());    // TODO: "ORGANISATION_PLACE"
+            vector<GPStore::Value *> university_prop_vec{university["name"], new GPStore::Value(prop_list[i]), location_city["name"]};
+            result.back().back().data_.List->emplace_back(new GPStore::Value(university_prop_vec, true));
         }
         list = nullptr; prop_list = nullptr;
 
         result.back().emplace_back(GPStore::Value::Type::LIST);
         person.GetLinkedNodesWithEdgeProps("WORK_AT", list, prop_list, prop_len, list_len, EDGE_OUT);
         for (unsigned i = 0; i < list_len; ++i) {
-        Node company(list[i]);
-        Node location_country(company["ORGANISATION_PLACE"]->toLLong());
-        vector<GPStore::Value *> university_prop_vec{company["name"], new GPStore::Value(prop_list[i]), location_country["name"]};
-        result.back().back().data_.List->emplace_back(new GPStore::Value(university_prop_vec, true));
+            Node company(list[i]);
+            Node location_country(company["ORGANISATION_PLACE"]->toLLong());
+            vector<GPStore::Value *> university_prop_vec{company["name"], new GPStore::Value(prop_list[i]), location_country["name"]};
+            result.back().back().data_.List->emplace_back(new GPStore::Value(university_prop_vec, true));
         }
     }
 }
