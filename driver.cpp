@@ -5,7 +5,9 @@
 #include <stack>
 #include <regex>
 #include "PProcedure.h"
+#ifdef _WIN32
 #include <windows.h>
+#endif
 using namespace std;
 
 void printResults(vector<vector<GPStore::Value>> &result) {
@@ -144,7 +146,9 @@ int main(int argc, char *argv[]) {
     if(isWindows){
         smallGraph = "..\\" + smallGraph;
         bigGraph = "..\\" + bigGraph;
+        #ifdef _WIN32
         SetConsoleOutputCP(CP_UTF8);
+        #endif
     }
 
     string headersPath, dynamicPath, staticPath;
