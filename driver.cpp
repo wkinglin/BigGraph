@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <stack>
 #include <regex>
+#include <memory>
 #include "PProcedure.h"
 #ifdef _WIN32
 #include <windows.h>
@@ -116,78 +117,36 @@ bool compareResults(std::vector<std::vector<GPStore::Value>> &result, std::vecto
     return true;
 }
 
-// stringstream mmapRead(const string& path) {
-// #ifdef _WIN32
-//     HANDLE hFile = CreateFileA(path.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL,
-//                                OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-//     if (hFile == INVALID_HANDLE_VALUE) {
+// stringstream fastRead(const string& path){
+//     ifstream finFile(path, std::ios::binary);
+//     if (!finFile.is_open()) {
 //         throw runtime_error("无法打开文件: " + path);
 //     }
-
-//     HANDLE hMapping = CreateFileMapping(hFile, NULL, PAGE_READONLY, 0, 0, NULL);
-//     if (!hMapping) {
-//         CloseHandle(hFile);
-//         throw runtime_error("无法创建文件映射: " + path);
-//     }
-
-//     void* fileData = MapViewOfFile(hMapping, FILE_MAP_READ, 0, 0, 0);
-//     if (!fileData) {
-//         CloseHandle(hMapping);
-//         CloseHandle(hFile);
-//         throw runtime_error("无法映射文件视图: " + path);
-//     }
-
-//     LARGE_INTEGER fileSize;
-//     GetFileSizeEx(hFile, &fileSize);
-
-//     stringstream ss(string(static_cast<char*>(fileData), fileSize.QuadPart));
-
-//     UnmapViewOfFile(fileData);
-//     CloseHandle(hMapping);
-//     CloseHandle(hFile);
-
+//     vector<char> buf(finFile.seekg(0, std::ios::end).tellg());
+//     finFile.seekg(0, std::ios::beg).read(&buf[0], static_cast<std::streamsize>(buf.size()));
+//     finFile.close();
+//     // 处理buffer中的数据
+//     stringstream ss(string(buf.begin(), buf.end()));
 //     return ss;
-// #else
-//     int fd = open(path.c_str(), O_RDONLY);
-//         if (fd == -1) {
-//             throw runtime_error("无法打开文件: " + path);
-//         }
-
-//         struct stat sb;
-//         if (fstat(fd, &sb) == -1) {
-//             close(fd);
-//             throw runtime_error("无法获取文件状态: " + path);
-//         }
-
-//         void* addr = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-//         if (addr == MAP_FAILED) {
-//             close(fd);
-//             throw runtime_error("无法映射文件: " + path);
-//         }
-
-//         stringstream ss(string(static_cast<char*>(addr), sb.st_size));
-
-//         munmap(addr, sb.st_size);
-//         close(fd);
-
-//         return ss;
-// #endif
 // }
 
-stringstream fastRead(const string& path){
-    ifstream finFile(path, std::ios::binary);
-    if (!finFile.is_open()) {
+stringstream fastRead(const string& path) {
+    // 使用unique_ptr自动管理文件句柄
+    unique_ptr<std::ifstream> finFile(new std::ifstream(path, std::ios::binary | std::ios::ate));
+    if (!finFile->is_open()) {
         throw runtime_error("无法打开文件: " + path);
     }
-    vector<char> buf(finFile.seekg(0, std::ios::end).tellg());
-    finFile.seekg(0, std::ios::beg).read(&buf[0], static_cast<std::streamsize>(buf.size()));
-    finFile.close();
-    // 处理buffer中的数据
-    stringstream ss(string(buf.begin(), buf.end()));
-    return ss;
+
+    // 获取文件大小
+    auto fileSize = finFile->tellg();
+    
+    // 使用vector自动管理buffer内存
+    vector<char> buffer(fileSize);
+    finFile->seekg(0);
+    finFile->read(buffer.data(), fileSize);
+
+    return stringstream(string(buffer.begin(), buffer.end()));
 }
-
-
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
@@ -205,11 +164,11 @@ int main(int argc, char *argv[]) {
     // 基本路径
     string separator;
     bool isWindows = false;
-#ifdef _WIN32
-    isWindows = true;
-#else
-    isWindows = false;
-#endif
+    #ifdef _WIN32
+        isWindows = true;
+    #else
+        isWindows = false;
+    #endif
 
     if(isWindows) separator = "\\";
     else separator = "/";
@@ -219,9 +178,9 @@ int main(int argc, char *argv[]) {
     if(isWindows){
         smallGraph = "..\\" + smallGraph;
         bigGraph = "..\\" + bigGraph;
-#ifdef _WIN32
-        SetConsoleOutputCP(CP_UTF8);
-#endif
+        #ifdef _WIN32
+                SetConsoleOutputCP(CP_UTF8);
+        #endif
     }
 
     string headersPath, dynamicPath, staticPath;
@@ -298,7 +257,7 @@ int main(int argc, char *argv[]) {
             }
             while (getline(ssFile, line1)) {
                 GPStore::Value id(-1);
-                Node* node = new Node();
+                std::shared_ptr<Node> node = std::make_shared<Node>();
                 node->node_id_ = nodeId++;
                 node->setLabel(nodeType);
 
@@ -428,10 +387,10 @@ int main(int argc, char *argv[]) {
                 string index2 = toIDMap[id2];
 
                 if (totalMap.find(index1) == totalMap.end()) throw runtime_error("Index: " + index1 + " 不在Map中");
-                Node* fromNode = totalMap[index1];
+                std::shared_ptr<Node> fromNode = totalMap[index1];
 
                 if (totalMap.find(index2) == totalMap.end()) throw runtime_error("Index: " + index2 + " 不在Map中");
-                Node* toNode = totalMap[index2];
+                std::shared_ptr<Node> toNode = totalMap[index2];
 
                 string attributeValue;
                 if (props.size() == 3) attributeValue = stringContents[2];
@@ -462,11 +421,11 @@ int main(int argc, char *argv[]) {
     cout << "--------------------------------check--------------------------------\n";
     string from_id = "7";
     string from_index = OrganisationIDMap[from_id];
-    Node* from_node = totalMap[from_index];
+    std::shared_ptr<Node> from_node = totalMap[from_index];
     string target = from_node->outRelations["ISLOCATEDIN"][0];
     size_t pos = target.find('|');
     string to_index = target.substr(0, pos);
-    Node* to_node = totalMap[to_index];
+    std::shared_ptr<Node> to_node = totalMap[to_index];
     string to_id = to_node->columns["id:ID(Place)"].toString();
     cout << "from_node: \n";
     from_node->print();
@@ -484,7 +443,7 @@ int main(int argc, char *argv[]) {
         if (line == "builtin_test") {
             // Read test cases from file and compare the results with the ground truth
             //string groundTruthDir = "ground_truth/";
-            string groundTruthDir = "." + separator + "ground_truth" + separator;
+            string groundTruthDir = ".." + separator + "ground_truth" + separator;
             vector<string> procs = {"ic1", "ic2", "is1"};
             for (const string &proc : procs) {
                 string groundTruthFile = groundTruthDir + proc + "-sf" + sf + ".txt";
@@ -595,12 +554,5 @@ int main(int argc, char *argv[]) {
             printResults(result);
         }
     }
-
-    // 在程序结束时清理内存
-    for(auto& pair : totalMap) {
-        delete pair.second;
-    }
-    totalMap.clear();
-
     return 0;
 }

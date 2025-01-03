@@ -72,11 +72,6 @@ void ic1(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStor
     std::set<TYPE_ENTITY_LITERAL_ID> visited({start_vid});
 
     for (int distance = 0; distance <= 3; distance++) {
-//        cout << "-------------------------------------------------" << '\n';
-//        cout << "first_name: " << first_name << '\n';
-//        cout << "distance: " << distance << '\n';
-//        cout << "candidates.size(): " << candidates.size() << '\n';
-//        cout << "curr_frontier.size(): " << curr_frontier.size() << '\n';
         std::vector<TYPE_ENTITY_LITERAL_ID > next_frontier;
         for (const auto& vid : curr_frontier) {
             Node froniter_person(vid);
@@ -91,7 +86,6 @@ void ic1(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStor
                 if (tup > candidate) continue;
             }
             candidates.emplace(std::move(tup));
-            cout << "tup: " << std::get<1>(tup) << '\n';
             if (candidates.size() > LIMIT_NUM) {
                 candidates.erase(--candidates.end());
             }
@@ -193,8 +187,24 @@ void ic2(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStor
     person.GetLinkedNodes("KNOWS", friends_list, list_len, EDGE_OUT);
     person.GetLinkedNodes("KNOWS", friends_list_in, list_len1, EDGE_IN);
 
+    // 自定义比较函数
+    struct CustomCompare {
+        bool operator()(const std::tuple<ull, ull, ull, ull>& a, const std::tuple<ull, ull, ull, ull>& b) const {
+            // 先比较第一个元素（降序）
+            if (std::get<0>(a) != std::get<0>(b)) {
+                return std::get<0>(a) > std::get<0>(b);  // 降序
+            }
+            // 如果第一个元素相同，再比较第二个元素（升序）
+            if (std::get<1>(a) != std::get<1>(b)) {
+                return std::get<1>(a) < std::get<1>(b);  // 升序
+            }
+            // 如果前两个元素相同，第三个元素保持默认顺序（无需排序）
+            return false;  // 第三个元素不参与排序
+        }
+    };
+
     // 对每一个Friend Node，找出它的所有Message
-    vector<pair<Node, Node>> messages = vector<pair<Node, Node>>();
+    std::set<std::tuple<ull, ull, ull, ull>, CustomCompare> candidates;
     for(int i = 0;i<list_len;i++)
     {
         Node friend_node(friends_list[i]);
@@ -205,7 +215,18 @@ void ic2(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStor
         for(int j = 0;j<msg_list_len;j++)
         {
             Node msg(msg_list[j]);
-            messages.emplace_back(friend_node, msg);
+            if(msg["creationDate"]->comp(maxDate)==1) continue;
+            auto tup = std::make_tuple(msg["creationDate"]->toLLong(), msg["id"]->toLLong(), friend_node.node_id_, msg.node_id_);
+            if (candidates.size() >= LIMIT_NUM) {
+                auto& candidate = *candidates.rbegin();
+                if (!CustomCompare()(tup, candidate)) {
+                    continue;  // 如果当前元素比候选集中的最小元素还小，则跳过插入
+                }
+            }
+            candidates.emplace(std::move(tup));
+            if (candidates.size() > LIMIT_NUM) {
+                candidates.erase(--candidates.end());
+            }
         }
     }
     for(int i = 0;i<list_len1;i++)
@@ -218,37 +239,27 @@ void ic2(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStor
         for(int j = 0;j<msg_list_len;j++)
         {
             Node msg(msg_list[j]);
-            messages.emplace_back(friend_node, msg);
+            if(msg["creationDate"]->comp(maxDate)==1) continue;
+            auto tup = std::make_tuple(msg["creationDate"]->toLLong(), msg["id"]->toLLong(), friend_node.node_id_, msg.node_id_);
+            if (candidates.size() >= LIMIT_NUM) {
+                auto& candidate = *candidates.rbegin();
+                if (!CustomCompare()(tup, candidate)) {
+                    continue;  // 如果当前元素比候选集中的最小元素还小，则跳过插入
+                }
+            }
+            candidates.emplace(std::move(tup));
+            if (candidates.size() > LIMIT_NUM) {
+                candidates.erase(--candidates.end());
+            }
         }
     }
 
-    // 对这些Messages排序
-    struct sort_function{
-        bool operator()(pair<Node,Node> x, pair<Node,Node> y){
-            Node a = x.second;
-            Node b = y.second;
-            switch(a["creationDate"]->comp(b["creationDate"]))
-            {
-                case 1:
-                    return true;
-                case 0:
-                    if(a["id"]<=b["id"]) return true;
-                    else return false;
-                case -1:
-                    return false;
-            }
-            return false;
-        }
-    } func;
-    sort(messages.begin(), messages.end(), func);
-
-    // 选出前20个，复制到结果中
-    int cnt = 0, limit = 20;
-    for(auto message: messages)
+    for(const auto &tup: candidates)
     {
-        Node friend_node = message.first;
-        Node msg_node = message.second;
-        if(msg_node["creationDate"]->comp(maxDate)==1) continue;
+        ull fid = std::get<2>(tup);
+        ull mid = std::get<3>(tup);
+        Node friend_node(fid);
+        Node msg_node(mid);
 
         // 处理imageFile
         GPStore::Value* content = msg_node["content"];
@@ -262,8 +273,6 @@ void ic2(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStor
         result.back().emplace_back(*msg_node["id"]);
         result.back().emplace_back(*content);
         result.back().emplace_back(*msg_node["creationDate"]);
-        cnt++;
-        if(cnt>=limit) break;
     }
 }
 

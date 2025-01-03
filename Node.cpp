@@ -4,7 +4,7 @@
 
 
 // 不同节点的列表，格式为id2Node
-std::unordered_map<std::string, Node*> totalMap;
+std::unordered_map<std::string, std::shared_ptr<Node>> totalMap;
 
 // 节点的实体id转全局id
 std::unordered_map<std::string, std::string> PersonIDMap;
@@ -45,7 +45,7 @@ Node::Node(const std::string& label_string, const std::string& prop_string, cons
     string index = innerIDMap[value->toString()];
 
     // 从Map中获取对应节点
-    Node* source_node = totalMap[index];
+    std::shared_ptr<Node> source_node = totalMap[index];
 
     // 复制节点的所有属性到当前对象
     this->node_id_ = source_node->node_id_;
@@ -59,7 +59,7 @@ Node::Node(const std::string& label_string, const std::string& prop_string, cons
 
 Node::Node(ull node_id) {
     // 从totalMap中获取对应节点
-    Node* source_node = totalMap[to_string(node_id)];
+    std::shared_ptr<Node> source_node = totalMap[to_string(node_id)];
 
     // 复制节点的所有属性到当前对象
     this->node_id_ = source_node->node_id_;

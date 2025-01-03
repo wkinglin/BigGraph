@@ -43,7 +43,7 @@ public:
 
 
 // 不同节点的列表，格式为id2Node
-extern std::unordered_map<std::string, Node*> totalMap;
+extern std::unordered_map<std::string, std::shared_ptr<Node>> totalMap;
 
 // 节点的实体id转全局id
 extern std::unordered_map<std::string, std::string> PersonIDMap;
