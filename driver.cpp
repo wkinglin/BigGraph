@@ -116,63 +116,63 @@ bool compareResults(std::vector<std::vector<GPStore::Value>> &result, std::vecto
     return true;
 }
 
-stringstream mmapRead(const string& path) {
-#ifdef _WIN32
-    HANDLE hFile = CreateFileA(path.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL,
-                               OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (hFile == INVALID_HANDLE_VALUE) {
-        throw runtime_error("无法打开文件: " + path);
-    }
+// stringstream mmapRead(const string& path) {
+// #ifdef _WIN32
+//     HANDLE hFile = CreateFileA(path.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL,
+//                                OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+//     if (hFile == INVALID_HANDLE_VALUE) {
+//         throw runtime_error("无法打开文件: " + path);
+//     }
 
-    HANDLE hMapping = CreateFileMapping(hFile, NULL, PAGE_READONLY, 0, 0, NULL);
-    if (!hMapping) {
-        CloseHandle(hFile);
-        throw runtime_error("无法创建文件映射: " + path);
-    }
+//     HANDLE hMapping = CreateFileMapping(hFile, NULL, PAGE_READONLY, 0, 0, NULL);
+//     if (!hMapping) {
+//         CloseHandle(hFile);
+//         throw runtime_error("无法创建文件映射: " + path);
+//     }
 
-    void* fileData = MapViewOfFile(hMapping, FILE_MAP_READ, 0, 0, 0);
-    if (!fileData) {
-        CloseHandle(hMapping);
-        CloseHandle(hFile);
-        throw runtime_error("无法映射文件视图: " + path);
-    }
+//     void* fileData = MapViewOfFile(hMapping, FILE_MAP_READ, 0, 0, 0);
+//     if (!fileData) {
+//         CloseHandle(hMapping);
+//         CloseHandle(hFile);
+//         throw runtime_error("无法映射文件视图: " + path);
+//     }
 
-    LARGE_INTEGER fileSize;
-    GetFileSizeEx(hFile, &fileSize);
+//     LARGE_INTEGER fileSize;
+//     GetFileSizeEx(hFile, &fileSize);
 
-    stringstream ss(string(static_cast<char*>(fileData), fileSize.QuadPart));
+//     stringstream ss(string(static_cast<char*>(fileData), fileSize.QuadPart));
 
-    UnmapViewOfFile(fileData);
-    CloseHandle(hMapping);
-    CloseHandle(hFile);
+//     UnmapViewOfFile(fileData);
+//     CloseHandle(hMapping);
+//     CloseHandle(hFile);
 
-    return ss;
-#else
-    int fd = open(path.c_str(), O_RDONLY);
-        if (fd == -1) {
-            throw runtime_error("无法打开文件: " + path);
-        }
+//     return ss;
+// #else
+//     int fd = open(path.c_str(), O_RDONLY);
+//         if (fd == -1) {
+//             throw runtime_error("无法打开文件: " + path);
+//         }
 
-        struct stat sb;
-        if (fstat(fd, &sb) == -1) {
-            close(fd);
-            throw runtime_error("无法获取文件状态: " + path);
-        }
+//         struct stat sb;
+//         if (fstat(fd, &sb) == -1) {
+//             close(fd);
+//             throw runtime_error("无法获取文件状态: " + path);
+//         }
 
-        void* addr = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-        if (addr == MAP_FAILED) {
-            close(fd);
-            throw runtime_error("无法映射文件: " + path);
-        }
+//         void* addr = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+//         if (addr == MAP_FAILED) {
+//             close(fd);
+//             throw runtime_error("无法映射文件: " + path);
+//         }
 
-        stringstream ss(string(static_cast<char*>(addr), sb.st_size));
+//         stringstream ss(string(static_cast<char*>(addr), sb.st_size));
 
-        munmap(addr, sb.st_size);
-        close(fd);
+//         munmap(addr, sb.st_size);
+//         close(fd);
 
-        return ss;
-#endif
-}
+//         return ss;
+// #endif
+// }
 
 stringstream fastRead(const string& path){
     ifstream finFile(path, std::ios::binary);
@@ -484,7 +484,7 @@ int main(int argc, char *argv[]) {
         if (line == "builtin_test") {
             // Read test cases from file and compare the results with the ground truth
             //string groundTruthDir = "ground_truth/";
-            string groundTruthDir = ".." + separator + "ground_truth" + separator;
+            string groundTruthDir = "." + separator + "ground_truth" + separator;
             vector<string> procs = {"ic1", "ic2", "is1"};
             for (const string &proc : procs) {
                 string groundTruthFile = groundTruthDir + proc + "-sf" + sf + ".txt";
