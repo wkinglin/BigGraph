@@ -35,31 +35,31 @@ std::string trim(const std::string& str, const std::string& whitespace = " \t\n\
 }
 
 std::vector<std::string> splitList(const std::string& str) {
-	std::vector<std::string> tokens;
-	std::string cur = "";
-	stack<char> st;
-	for (int i = 0; i < str.size(); ++i) {
-		if (str[i] == '[') {
-			st.push('[');
-			cur += str[i];
-		} else if (str[i] == ']') {
-			st.pop();
-			cur += str[i];
-			if (st.empty()) {
-				tokens.push_back(cur);
-				cur = "";
-			}
-		} else if (str[i] == ',' || str[i] == ' ') {
-			if (st.empty()) {
-				cur = "";
-			} else {
-				cur += str[i];
-			}
-		} else {
-			cur += str[i];
-		}
-	}
-	return tokens;
+    std::vector<std::string> tokens;
+    std::string cur = "";
+    stack<char> st;
+    for (int i = 0; i < str.size(); ++i) {
+        if (str[i] == '[') {
+            st.push('[');
+            cur += str[i];
+        } else if (str[i] == ']') {
+            st.pop();
+            cur += str[i];
+            if (st.empty()) {
+                tokens.push_back(cur);
+                cur = "";
+            }
+        } else if (str[i] == ',' || str[i] == ' ') {
+            if (st.empty()) {
+                cur = "";
+            } else {
+                cur += str[i];
+            }
+        } else {
+            cur += str[i];
+        }
+    }
+    return tokens;
 }
 
 std::vector<std::string> split(const std::string& str, char delimiter) {
@@ -91,11 +91,11 @@ bool compareResults(std::vector<std::vector<GPStore::Value>> &result, std::vecto
             } else {
                 // Parse the trueResults into a vector<string>
                 string curTrue = trueResults[i][j].substr(1, trueResults[i][j].size() - 2);	// get rid of outermost brackets
-				vector<string> trueList;
-				if (curTrue[0] == '[')
-					trueList = splitList(curTrue);
-				else
-					trueList = split(curTrue, ',');
+                vector<string> trueList;
+                if (curTrue[0] == '[')
+                    trueList = splitList(curTrue);
+                else
+                    trueList = split(curTrue, ',');
                 size_t genListLen = 0;
                 std::vector<GPStore::Value *> *genListVal = result[i][j].data_.List;
                 for (int k = 0; k < genListVal->size(); ++k) {
@@ -205,11 +205,11 @@ int main(int argc, char *argv[]) {
     // 基本路径
     string separator;
     bool isWindows = false;
-    #ifdef _WIN32
-        isWindows = true;
-    #else
-        isWindows = false;
-    #endif
+#ifdef _WIN32
+    isWindows = true;
+#else
+    isWindows = false;
+#endif
 
     if(isWindows) separator = "\\";
     else separator = "/";
@@ -219,9 +219,9 @@ int main(int argc, char *argv[]) {
     if(isWindows){
         smallGraph = "..\\" + smallGraph;
         bigGraph = "..\\" + bigGraph;
-        #ifdef _WIN32
+#ifdef _WIN32
         SetConsoleOutputCP(CP_UTF8);
-        #endif
+#endif
     }
 
     string headersPath, dynamicPath, staticPath;
@@ -256,19 +256,6 @@ int main(int argc, char *argv[]) {
             {"Comment",{"dynamic", "Comment_hasCreator_Person.csv", "comment_hasCreator_person_0_0.csv"}},
             {"Post",{"dynamic", "Post_hasCreator_Person.csv", "post_hasCreator_person_0_0.csv"}},
             {"Organisation",{"static", "Organisation_isLocatedIn_Place.csv", "organisation_isLocatedIn_place_0_0.csv"}},
-    };
-
-    std::unordered_map<string, std::unordered_map<string, Node*>*> type2Map={
-            {"Person", &PersonMap},
-            {"Comment", &CommentMap},
-            {"Post", &PostMap},
-            {"University", &UniversityMap},
-            {"Company", &CompanyMap},
-            {"City", &CityMap},
-            {"Country", &CountryMap},
-            {"Message", &MessageMap},
-            {"Organisation", &OrganisationMap},
-            {"Place", &PlaceMap},
     };
 
     std::unordered_map<string, std::unordered_map<string, string>*> type2IDMap={
@@ -357,32 +344,25 @@ int main(int argc, char *argv[]) {
                 }
 
                 // 添加节点到相应的Map中
-                auto& innerMap = *type2Map[nodeType];
                 auto& innerIDMap = *type2IDMap[nodeType];
 
                 string nodeIdStr = to_string(node->node_id_);
-                innerMap[nodeIdStr] = node;
-                innerIDMap[id.toString()] = nodeIdStr;
-
-                // 添加全局Map
                 totalMap[nodeIdStr] = node;
+                innerIDMap[id.toString()] = nodeIdStr;
 
                 // 对父类进行处理
                 if(nodeType=="Post" || nodeType=="Comment") {
-                    MessageMap[to_string(node->node_id_)] = node;
                     MessageIDMap[id.toString()] = to_string(node->node_id_);
                 }
                 else if(nodeType=="University" || nodeType=="Company") {
-                    OrganisationMap[to_string(node->node_id_)] = node;
                     OrganisationIDMap[id.toString()] = to_string(node->node_id_);
                 }
                 else if(nodeType=="City" || nodeType=="Country"){
-                    PlaceMap[to_string(node->node_id_)] = node;
                     PlaceIDMap[id.toString()] = to_string(node->node_id_);
                 }
             }
 
-            cout << nodeType<< "Mapsize: " << type2Map[nodeType]->size() << "\n";
+            cout << nodeType<< "Mapsize: " << type2IDMap[nodeType]->size() << "\n";
         }
         cout << "--------------------------------\n";
 
@@ -430,16 +410,8 @@ int main(int argc, char *argv[]) {
                 cout << "Relation Name:" << relationName << " fromType: " << fromType << " toType: " << toType << "\n";
             }
 
-            auto fromIDMapIt = type2IDMap.find(fromType);
-            auto fromNodeMapIt = type2Map.find(fromType);
-            auto toIDMapIt = type2IDMap.find(toType);
-            auto toNodeMapIt = type2Map.find(toType);
-
-
-            auto& fromIDMap = *fromIDMapIt->second;
-            auto& fromNodeMap = *fromNodeMapIt->second;
-            auto& toIDMap = *toIDMapIt->second;
-            auto& toNodeMap = *toNodeMapIt->second;
+            auto& fromIDMap = *type2IDMap.find(fromType)->second;
+            auto& toIDMap = *type2IDMap.find(toType)->second;
 
             while (getline(ssFile, line1)) {
                 vector<string> stringContents = split(line1, '|');
@@ -455,13 +427,11 @@ int main(int argc, char *argv[]) {
                 if (toIDMap.find(id2) == toIDMap.end()) throw runtime_error("ID: " + id2 + " 不在 " + toType + " ID Map中");
                 string index2 = toIDMap[id2];
 
-                auto fromNodeIt = fromNodeMap.find(index1);
-                if (fromNodeIt == fromNodeMap.end()) throw runtime_error("Index: " + index1 + " 不在 " + fromType + " Map中");
-                Node* fromNode = fromNodeMap[index1];
+                if (totalMap.find(index1) == totalMap.end()) throw runtime_error("Index: " + index1 + " 不在Map中");
+                Node* fromNode = totalMap[index1];
 
-                auto toNodeIt = toNodeMap.find(index2);
-                if (toNodeIt == toNodeMap.end()) throw runtime_error("Index: " + index2 + " 不在 " + toType + " Map中");
-                Node* toNode = toNodeMap[index2];
+                if (totalMap.find(index2) == totalMap.end()) throw runtime_error("Index: " + index2 + " 不在Map中");
+                Node* toNode = totalMap[index2];
 
                 string attributeValue;
                 if (props.size() == 3) attributeValue = stringContents[2];
@@ -492,11 +462,11 @@ int main(int argc, char *argv[]) {
     cout << "--------------------------------check--------------------------------\n";
     string from_id = "7";
     string from_index = OrganisationIDMap[from_id];
-    Node* from_node = OrganisationMap[from_index];
+    Node* from_node = totalMap[from_index];
     string target = from_node->outRelations["ISLOCATEDIN"][0];
     size_t pos = target.find('|');
     string to_index = target.substr(0, pos);
-    Node* to_node = PlaceMap[to_index];
+    Node* to_node = totalMap[to_index];
     string to_id = to_node->columns["id:ID(Place)"].toString();
     cout << "from_node: \n";
     from_node->print();
@@ -631,10 +601,6 @@ int main(int argc, char *argv[]) {
         delete pair.second;
     }
     totalMap.clear();
-    // 其他Map只需要clear，因为它们指向的是相同的Node对象
-    PersonMap.clear();
-    OrganisationMap.clear();
-    // ... 清理其他Map ...
 
     return 0;
 }

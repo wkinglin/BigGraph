@@ -1,12 +1,13 @@
 #include "PProcedure.h"
+#include <iostream>
 using namespace std;
 const ull LIMIT_NUM = 20;
 const char EDGE_IN = 'i';
 const char EDGE_OUT = 'o';
 
 void ProcessMessageLikes(Node &message, long long message_id, long long message_creation_date,
-const std::string &message_content, Node &other_person, std::map<TYPE_ENTITY_LITERAL_ID, long long> &person_id_map,
-std::map<long long, std::pair<long long, long long> > &candidates_index, std::map<std::pair<long long, long long>, std::tuple<long long, long long, std::string, int> > &candidates) {
+                         const std::string &message_content, Node &other_person, std::map<TYPE_ENTITY_LITERAL_ID, long long> &person_id_map,
+                         std::map<long long, std::pair<long long, long long> > &candidates_index, std::map<std::pair<long long, long long>, std::tuple<long long, long long, std::string, int> > &candidates) {
     std::shared_ptr<const TYPE_ENTITY_LITERAL_ID[]> person_friends = nullptr;
     ull friends_num = 0;
     std::shared_ptr<const long long[]> creation_date_list = nullptr;
@@ -17,43 +18,43 @@ std::map<long long, std::pair<long long, long long> > &candidates_index, std::ma
         long long like_creation_date = creation_date_list[j];
         auto it = candidates_index.find(person_vid);
         if (it != candidates_index.end()) {
-        auto &key = it->second;
-        if (like_creation_date < 0 - key.first) {
-            continue;
-        }
-        if (like_creation_date == 0 - key.first) {
-            auto cit = candidates.find(key);
-            long long old_message_id = std::get<1>(cit->second);
-            if (message_id > old_message_id) {
-            continue;
+            auto &key = it->second;
+            if (like_creation_date < 0 - key.first) {
+                continue;
             }
-        }
-        candidates.erase(key);
-        key.first = 0 - like_creation_date;
-        candidates.emplace(key, std::make_tuple(person_vid, message_id, message_content,
-                            (like_creation_date - message_creation_date) / 1000 / 60));
+            if (like_creation_date == 0 - key.first) {
+                auto cit = candidates.find(key);
+                long long old_message_id = std::get<1>(cit->second);
+                if (message_id > old_message_id) {
+                    continue;
+                }
+            }
+            candidates.erase(key);
+            key.first = 0 - like_creation_date;
+            candidates.emplace(key, std::make_tuple(person_vid, message_id, message_content,
+                                                    (like_creation_date - message_creation_date) / 1000 / 60));
         } else {
-        long long person_id;
-        auto pit = person_id_map.find(person_vid);
-        if (pit != person_id_map.end()) {
-            person_id = pit->second;
-        } else {
-            other_person.Goto(person_vid);
-            person_id = other_person["id"]->toLLong();
-            person_id_map[person_vid] = person_id;
-        }
-        auto key = std::make_pair(0 - like_creation_date, person_id);
-        if (candidates.size() >= LIMIT_NUM && candidates.lower_bound(key) == candidates.end()) {
-            continue;
-        }
-        candidates.emplace(key, std::make_tuple(person_vid, message_id, message_content,
-                            (like_creation_date - message_creation_date) / 1000 / 60));
-        candidates_index.emplace(person_vid, key);
-        if (candidates.size() > LIMIT_NUM) {
-            auto cit = --candidates.end();
-            candidates_index.erase(candidates_index.find(std::get<0>(cit->second)));
-            candidates.erase(cit);
-        }
+            long long person_id;
+            auto pit = person_id_map.find(person_vid);
+            if (pit != person_id_map.end()) {
+                person_id = pit->second;
+            } else {
+                other_person.Goto(person_vid);
+                person_id = other_person["id"]->toLLong();
+                person_id_map[person_vid] = person_id;
+            }
+            auto key = std::make_pair(0 - like_creation_date, person_id);
+            if (candidates.size() >= LIMIT_NUM && candidates.lower_bound(key) == candidates.end()) {
+                continue;
+            }
+            candidates.emplace(key, std::make_tuple(person_vid, message_id, message_content,
+                                                    (like_creation_date - message_creation_date) / 1000 / 60));
+            candidates_index.emplace(person_vid, key);
+            if (candidates.size() > LIMIT_NUM) {
+                auto cit = --candidates.end();
+                candidates_index.erase(candidates_index.find(std::get<0>(cit->second)));
+                candidates.erase(cit);
+            }
         }
     }
 }
@@ -71,6 +72,11 @@ void ic1(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStor
     std::set<TYPE_ENTITY_LITERAL_ID> visited({start_vid});
 
     for (int distance = 0; distance <= 3; distance++) {
+//        cout << "-------------------------------------------------" << '\n';
+//        cout << "first_name: " << first_name << '\n';
+//        cout << "distance: " << distance << '\n';
+//        cout << "candidates.size(): " << candidates.size() << '\n';
+//        cout << "curr_frontier.size(): " << curr_frontier.size() << '\n';
         std::vector<TYPE_ENTITY_LITERAL_ID > next_frontier;
         for (const auto& vid : curr_frontier) {
             Node froniter_person(vid);
@@ -85,6 +91,7 @@ void ic1(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStor
                 if (tup > candidate) continue;
             }
             candidates.emplace(std::move(tup));
+            cout << "tup: " << std::get<1>(tup) << '\n';
             if (candidates.size() > LIMIT_NUM) {
                 candidates.erase(--candidates.end());
             }
@@ -223,12 +230,12 @@ void ic2(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStor
             switch(a["creationDate"]->comp(b["creationDate"]))
             {
                 case 1:
-                return true;
+                    return true;
                 case 0:
-                if(a["id"]<=b["id"]) return true;
-                else return false;
+                    if(a["id"]<=b["id"]) return true;
+                    else return false;
                 case -1:
-                return false;
+                    return false;
             }
             return false;
         }
